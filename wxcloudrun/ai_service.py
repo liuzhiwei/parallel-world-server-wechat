@@ -1,6 +1,8 @@
 import requests
+import json
 from datetime import datetime
 from typing import List, Dict, Optional
+from wxcloudrun import socketio
 
 
 class DeepSeekV3Service:
@@ -121,4 +123,78 @@ class DeepSeekV3Service:
                 "content": record.ai_response
             })
         
-        return messages 
+        return messages
+    
+    def chat_completion_stream(self, 
+                              messages: List[Dict[str, str]], 
+                              temperature: float = 0.7,
+                              max_tokens: int = 1000,
+                              room: Optional[str] = None) -> str:
+        """
+        流式聊天完成API调用
+        
+        Args:
+            messages: 消息列表
+            temperature: 温度参数
+            max_tokens: 最大token数
+            room: WebSocket房间名称
+            
+        Returns:
+            完整的AI响应文本
+        """
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60,
+                stream=True
+            )
+            response.raise_for_status()
+            
+            full_response = ""
+            
+            for line in response.iter_lines():
+                if line:
+                    line = line.decode('utf-8')
+                    if line.startswith('data: '):
+                        data_str = line[6:]
+                        if data_str.strip() == '[DONE]':
+                            break
+                        
+                        try:
+                            data = json.loads(data_str)
+                            if 'choices' in data and len(data['choices']) > 0:
+                                delta = data['choices'][0].get('delta', {})
+                                if 'content' in delta:
+                                    content = delta['content']
+                                    full_response += content
+                                    
+                                    if room:
+                                        socketio.emit('chat_stream', {
+                                            'code': 0,
+                                            'data': {
+                                                'content': content,
+                                                'is_complete': False
+                                            }
+                                        }, to=room)
+                        except json.JSONDecodeError:
+                            continue
+            
+            return full_response
+            
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"DeepSeek流式API调用失败: {str(e)}")     
