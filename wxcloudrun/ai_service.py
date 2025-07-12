@@ -17,8 +17,7 @@ class DeepSeekV3Service:
     def chat_completion(self, 
                        messages: List[Dict[str, str]], 
                        temperature: float = 0.7,
-                       max_tokens: int = 1000,
-                       stream: bool = False) -> Dict:
+                       max_tokens: int = 1000) -> Dict:
         """
         调用DeepSeek V3聊天完成API
         
@@ -41,7 +40,7 @@ class DeepSeekV3Service:
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens,
-            "stream": stream
+            "stream": False
         }
         
         try:
@@ -121,4 +120,4 @@ class DeepSeekV3Service:
                 "content": record.ai_response
             })
         
-        return messages 
+        return messages        
