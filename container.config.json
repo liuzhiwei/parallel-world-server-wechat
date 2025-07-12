@@ -27,6 +27,7 @@
 	"executeSQLs":[
 		"CREATE DATABASE IF NOT EXISTS flask_demo;",
 		"USE flask_demo;",
-		"CREATE TABLE IF NOT EXISTS `Counters` (`id` int(11) NOT NULL AUTO_INCREMENT, `count` int(11) NOT NULL DEFAULT 1, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARSET = utf8;"
+		"CREATE TABLE IF NOT EXISTS `Counters` (`id` int(11) NOT NULL AUTO_INCREMENT, `count` int(11) NOT NULL DEFAULT 1, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`)) ENGINE = InnoDB DEFAULT CHARSET = utf8;",
+		"CREATE TABLE IF NOT EXISTS `AIConversation` (`id` int(11) NOT NULL AUTO_INCREMENT, `user_id` varchar(100) NOT NULL, `session_id` varchar(100) NOT NULL, `user_message` text NOT NULL, `ai_response` text NOT NULL, `model_used` varchar(50) DEFAULT 'deepseek-v3', `tokens_used` int(11) DEFAULT 0, `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (`id`), KEY `idx_user_session` (`user_id`, `session_id`)) ENGINE = InnoDB DEFAULT CHARSET = utf8;"
 	]    
 }

@@ -66,7 +66,6 @@ def handle_chat_message(data):
         message = data.get('message')
         temperature = data.get('temperature', 0.7)
         max_tokens = data.get('max_tokens', 1000)
-        stream = data.get('stream', True)
         
         if not user_id or not session_id or not message:
             emit('error', {'code': -1, 'errorMsg': '缺少必需参数: user_id, session_id, message'})
@@ -92,71 +91,39 @@ def handle_chat_message(data):
             "content": message
         })
         
-        if stream:
-            try:
-                ai_response = ai_service.chat_completion_stream(
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    room=room
-                )
-                
-                conversation = AIConversation()
-                conversation.user_id = user_id
-                conversation.session_id = session_id
-                conversation.user_message = message
-                conversation.ai_response = ai_response
-                conversation.model_used = 'deepseek-v3'
-                conversation.created_at = datetime.now()
-                
-                insert_ai_conversation(conversation)
-                
-                socketio.emit('chat_complete', {
-                    'code': 0,
-                    'data': {
-                        'user_message': message,
-                        'ai_response': ai_response,
-                        'model': 'deepseek-v3'
-                    }
-                }, to=room)
-                
-            except Exception as e:
-                emit('error', {'code': -1, 'errorMsg': f'流式聊天失败: {str(e)}'})
-        else:
-            try:
-                api_response = ai_service.chat_completion(
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    stream=False
-                )
-                
-                ai_response = ai_service.get_response_text(api_response)
-                usage_info = ai_service.get_usage_info(api_response)
-                
-                conversation = AIConversation()
-                conversation.user_id = user_id
-                conversation.session_id = session_id
-                conversation.user_message = message
-                conversation.ai_response = ai_response
-                conversation.model_used = 'deepseek-v3'
-                conversation.tokens_used = usage_info.get('total_tokens', 0)
-                conversation.created_at = datetime.now()
-                
-                insert_ai_conversation(conversation)
-                
-                socketio.emit('chat_response', {
-                    'code': 0,
-                    'data': {
-                        'user_message': message,
-                        'ai_response': ai_response,
-                        'model': 'deepseek-v3',
-                        'usage': usage_info
-                    }
-                }, to=room)
-                
-            except Exception as e:
-                emit('error', {'code': -1, 'errorMsg': f'聊天失败: {str(e)}'})
+        try:
+            api_response = ai_service.chat_completion(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+            
+            ai_response = ai_service.get_response_text(api_response)
+            usage_info = ai_service.get_usage_info(api_response)
+            
+            conversation = AIConversation()
+            conversation.user_id = user_id
+            conversation.session_id = session_id
+            conversation.user_message = message
+            conversation.ai_response = ai_response
+            conversation.model_used = 'deepseek-v3'
+            conversation.tokens_used = usage_info.get('total_tokens', 0)
+            conversation.created_at = datetime.now()
+            
+            insert_ai_conversation(conversation)
+            
+            socketio.emit('chat_response', {
+                'code': 0,
+                'data': {
+                    'user_message': message,
+                    'ai_response': ai_response,
+                    'model': 'deepseek-v3',
+                    'usage': usage_info
+                }
+            }, to=room)
+            
+        except Exception as e:
+            emit('error', {'code': -1, 'errorMsg': f'聊天失败: {str(e)}'})
                 
     except Exception as e:
         emit('error', {'code': -1, 'errorMsg': f'处理聊天消息失败: {str(e)}'})
