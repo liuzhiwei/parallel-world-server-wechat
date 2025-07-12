@@ -106,8 +106,6 @@ def handle_chat_message(data):
             conversation.session_id = session_id
             conversation.user_message = message
             conversation.ai_response = ai_response
-            conversation.model_used = 'deepseek-v3'
-            conversation.tokens_used = usage_info.get('total_tokens', 0)
             conversation.created_at = datetime.now()
             
             insert_ai_conversation(conversation)
@@ -149,8 +147,6 @@ def handle_get_history(data):
                 'id': record.id,
                 'user_message': record.user_message,
                 'ai_response': record.ai_response,
-                'model_used': record.model_used,
-                'tokens_used': record.tokens_used,
                 'created_at': record.created_at.isoformat()
             })
         
