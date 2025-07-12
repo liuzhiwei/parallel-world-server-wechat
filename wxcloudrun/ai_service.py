@@ -1,19 +1,14 @@
-import os
-import json
 import requests
 from datetime import datetime
 from typing import List, Dict, Optional
-from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
 
 class DeepSeekV3Service:
     """DeepSeek V3 API服务类"""
     
     def __init__(self):
-        self.api_key = os.getenv('DEEPSEEK_API_KEY')
-        self.base_url = "https://api.deepseek.com/v1"
+        self.api_key = "sk-9109dab67ad949048268d64c72486bb7"
+        self.base_url = "https://api.deepseek.com"
         self.model = "deepseek-chat"
         
         if not self.api_key:
