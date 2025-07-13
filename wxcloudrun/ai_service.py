@@ -15,9 +15,9 @@ class DeepSeekV3Service:
             raise ValueError("DEEPSEEK_API_KEY environment variable is required")
     
     def chat_completion(self, 
-                       messages: List[Dict[str, str]], 
-                       temperature: float = 0.7,
-                       max_tokens: int = 1000) -> Dict:
+                        messages: List[Dict[str, str]], 
+                        temperature: float = 0.7,
+                        max_tokens: int = 1000) -> Dict:
         """
         调用DeepSeek V3聊天完成API
         
@@ -48,7 +48,7 @@ class DeepSeekV3Service:
                 f"{self.base_url}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=30
+                timeout=300
             )
             response.raise_for_status()
             return response.json()

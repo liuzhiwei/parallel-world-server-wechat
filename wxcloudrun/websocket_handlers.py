@@ -1,20 +1,49 @@
 from datetime import datetime
-from flask_socketio import emit, join_room, leave_room, disconnect
-from wxcloudrun import socketio
+from flask import Response, request, stream_with_context
 from wxcloudrun.ai_service import DeepSeekV3Service
-from wxcloudrun.model import AIConversation
-from wxcloudrun.dao import insert_ai_conversation, get_conversation_history
+import json
+from run import app
 
+def generate(user_message):
 
-@socketio.on('connect')
-def handle_connect():
-    """处理客户端连接"""
-    emit('status', {'msg': 'WebSocket连接成功', 'code': 0})
+    yield f"data: {json.dumps({'type': 'start', 'message': '开始处理...'})}\n\n"
+    
+    service = DeepSeekV3Service()
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    """处理客户端断开连接"""
-    print('客户端断开连接')
+    # 格式化消息为API所需的格式
+    messages = [
+        {
+            "role": "user",
+            "content": user_message
+        }
+    ]
+    api_response = service.chat_completion(
+        messages=messages,
+        temperature=0.7,
+        max_tokens=1000
+    )
+    
+    ai_response = service.get_response_text(api_response)
+    
+    yield f"data: {json.dumps({'type': 'chunk', 'content': ai_response})}\n\n"
+
+    # 发送完成信号
+    yield f"data: {json.dumps({'type': 'complete', 'message': '处理完成'})}\n\n"
+            
+
+@app.route('/api/chat/stream', methods=['GET'])
+def chat_stream():
+    user_message = request.args.get('message', '')
+    return Response(
+        stream_with_context(generate(user_message)),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        })
+
 
 # @socketio.on('chat_message')
 # def handle_chat_message(data):
