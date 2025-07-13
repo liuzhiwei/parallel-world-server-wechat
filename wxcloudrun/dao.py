@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
-from wxcloudrun.model import Counters, AIConversation
+# from wxcloudrun.model import Counters, AIConversation
 
 # 初始化日志
 logger = logging.getLogger('log')
@@ -47,24 +47,24 @@ def update_counterbyid(counter):
     db.session.commit()
 
 
-def insert_ai_conversation(conversation):
-    """
-    插入AI对话记录
-    :param conversation: AIConversation实体
-    """
-    db.session.add(conversation)
-    db.session.commit()
+# def insert_ai_conversation(conversation):
+#     """
+#     插入AI对话记录
+#     :param conversation: AIConversation实体
+#     """
+#     db.session.add(conversation)
+#     db.session.commit()
 
 
-def get_conversation_history(user_id, session_id, limit=10):
-    """
-    获取用户对话历史
-    :param user_id: 用户ID
-    :param session_id: 会话ID
-    :param limit: 限制条数
-    :return: 对话历史列表
-    """
-    return AIConversation.query.filter(
-        AIConversation.user_id == user_id,
-        AIConversation.session_id == session_id
-    ).order_by(AIConversation.created_at.desc()).limit(limit).all()
+# def get_conversation_history(user_id, session_id, limit=10):
+#     """
+#     获取用户对话历史
+#     :param user_id: 用户ID
+#     :param session_id: 会话ID
+#     :param limit: 限制条数
+#     :return: 对话历史列表
+#     """
+#     return AIConversation.query.filter(
+#         AIConversation.user_id == user_id,
+#         AIConversation.session_id == session_id
+#     ).order_by(AIConversation.created_at.desc()).limit(limit).all()

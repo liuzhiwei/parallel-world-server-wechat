@@ -15,14 +15,14 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(con
                                                                              config.password,
                                                                              config.db_address)
 
+socketio = SocketIO(app, cors_allowed_origins="*")
+
 # 初始化DB操作对象
 db = SQLAlchemy(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*")
-
 # 加载控制器
 from wxcloudrun import views
-from wxcloudrun import websocket_handlers
+# from wxcloudrun import websocket_handlers
 
 # 加载配置
 app.config.from_object('config')
