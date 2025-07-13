@@ -1,48 +1,84 @@
-from datetime import datetime
 from flask import Response, request, stream_with_context
 from wxcloudrun.ai_service import DeepSeekV3Service
 import json
+import urllib.parse
 from run import app
 
-def generate(user_message):
-
-    yield f"data: {json.dumps({'type': 'start', 'message': '开始处理...'})}\n\n"
-    
-    service = DeepSeekV3Service()
-
-    # 格式化消息为API所需的格式
-    messages = [
-        {
-            "role": "user",
-            "content": user_message
-        }
-    ]
-    api_response = service.chat_completion(
-        messages=messages,
-        temperature=0.7,
-        max_tokens=1000
+def create_response(generator):
+    """创建统一的响应"""
+    return Response(
+        stream_with_context(generator),
+        mimetype='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'Connection': 'keep-alive', 'Access-Control-Allow-Origin': '*'}
     )
-    
-    ai_response = service.get_response_text(api_response)
-    
-    yield f"data: {json.dumps({'type': 'chunk', 'content': ai_response})}\n\n"
 
-    # 发送完成信号
-    yield f"data: {json.dumps({'type': 'complete', 'message': '处理完成'})}\n\n"
-            
+def yield_data(data_type, **data):
+    """生成事件数据"""
+    yield f"data: {json.dumps({'type': data_type, **data})}\n\n"
+
+def generate_error(message):
+    """生成错误响应"""
+    yield from yield_data('error', message=message)
+
+def generate(messages):
+    """生成AI响应"""
+    try:
+        messages = [{"role": "user", "content": messages}]
+        
+        service = DeepSeekV3Service()
+        
+        # 添加重试机制
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                api_response = service.chat_completion(messages=messages, temperature=0.7, max_tokens=1000)
+                ai_response = service.get_response_text(api_response)
+                yield from yield_data('chunk', content=ai_response)
+                return  # 成功则退出
+            except Exception as e:
+                print(f"第{attempt + 1}次尝试失败: {str(e)}")
+                if attempt == max_retries - 1:  # 最后一次尝试
+                    raise e
+                import time
+                time.sleep(1)  # 等待1秒后重试
+        
+    except Exception as e:
+        print(f"AI服务调用失败: {str(e)}")
+        error_msg = str(e)
+        if "SSL" in error_msg or "EOF" in error_msg:
+            error_msg = "网络连接失败，请稍后重试"
+        yield from yield_data('error', message=f'处理失败: {error_msg}')
+
+def get_messages_from_request():
+    """从请求中获取消息数据"""
+    encoded_data = request.args.get('data', '')
+    if not encoded_data:
+        raise ValueError("缺少data参数")
+    
+    decoded_data = urllib.parse.unquote(encoded_data)
+    print(f"解码后的数据: {decoded_data}")
+    
+    data = json.loads(decoded_data)
+    print(f"解析后的JSON数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
+    
+    messages = data.get('messages', [])
+    print(f"提取的messages: {json.dumps(messages, ensure_ascii=False, indent=2)}")
+    
+    if not messages:
+        raise ValueError("缺少messages数据")
+    
+    return messages
 
 @app.route('/api/chat/stream', methods=['GET'])
 def chat_stream():
-    user_message = request.args.get('message', '')
-    return Response(
-        stream_with_context(generate(user_message)),
-        mimetype='text/event-stream',
-        headers={
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        })
+    """聊天流式接口"""
+    try:
+        messages = get_messages_from_request()
+        return create_response(generate(messages))
+    except (ValueError, json.JSONDecodeError) as e:
+        return create_response(generate_error(str(e)))
+    except Exception as e:
+        return create_response(generate_error(f"处理失败: {str(e)}"))
 
 
 # @socketio.on('chat_message')
