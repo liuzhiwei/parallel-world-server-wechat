@@ -20,12 +20,13 @@ class WeChatCloudConfig:
     @staticmethod
     def get_upload_path():
         """获取上传路径"""
+        import os
         if WeChatCloudConfig.WX_CLOUD_ENV == 'production':
             # 生产环境使用云存储
-            return '7072-prod-6ggpgoum0c8c2ffd-1365416418/user-avatar'
+            return os.path.join(os.getcwd(), 'uploads')
         else:
             # 开发环境使用本地存储
-            return 'uploads'
+            return os.path.join(os.getcwd(), 'uploads')
     
     @staticmethod
     def get_file_url(filename):

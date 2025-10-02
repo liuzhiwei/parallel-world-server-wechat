@@ -10,8 +10,14 @@ pymysql.install_as_MySQLdb()
 app = Flask(__name__, instance_relative_config=True)
 
 # 微信云托管静态文件配置
-app.config['UPLOAD_FOLDER'] = 'uploads'
+import os
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# 确保上传目录存在
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # 设定数据库链接
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(config.username, 
@@ -33,5 +39,8 @@ app.config.from_object('config')
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
     """提供上传文件的访问"""
-    from flask import send_from_directory
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    from flask import send_from_directory, abort
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except FileNotFoundError:
+        abort(404)

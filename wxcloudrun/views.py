@@ -163,20 +163,30 @@ def upload_avatar():
     :return: 上传后的文件URL
     """
     try:
+        print(f"收到上传请求，Content-Type: {request.content_type}")
+        print(f"请求文件: {list(request.files.keys())}")
+        print(f"请求表单: {dict(request.form)}")
+        
         # 检查是否有文件上传
         if 'file' not in request.files:
+            print("错误：没有上传文件")
             return make_err_response('没有上传文件')
         
         file = request.files['file']
         if file.filename == '':
+            print("错误：没有选择文件")
             return make_err_response('没有选择文件')
+        
+        print(f"文件名: {file.filename}")
         
         # 检查文件类型
         if not WeChatCloudConfig.is_allowed_file(file.filename):
+            print(f"错误：不支持的文件格式: {file.filename}")
             return make_err_response('不支持的文件格式，请上传图片文件')
         
         # 检查上传类型
         upload_type = request.form.get('type', '')
+        print(f"上传类型: {upload_type}")
         if upload_type != 'avatar':
             return make_err_response('上传类型错误')
         
@@ -187,19 +197,26 @@ def upload_avatar():
         
         # 创建上传目录（微信云托管环境）
         upload_folder = os.path.join(WeChatCloudConfig.get_upload_path(), 'avatars')
+        print(f"上传目录: {upload_folder}")
         if not os.path.exists(upload_folder):
             os.makedirs(upload_folder, exist_ok=True)
+            print(f"创建目录: {upload_folder}")
         
         # 保存文件
         file_path = os.path.join(upload_folder, unique_filename)
+        print(f"保存路径: {file_path}")
         file.save(file_path)
         
         # 生成访问URL（微信云托管格式）
         avatar_url = WeChatCloudConfig.get_file_url(f"avatars/{unique_filename}")
+        print(f"生成URL: {avatar_url}")
         
         return make_succ_response({'url': avatar_url})
         
     except Exception as e:
+        print(f"上传异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return make_err_response(f'文件上传失败: {str(e)}')
 
 
