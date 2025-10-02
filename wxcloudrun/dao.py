@@ -3,6 +3,7 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
+from wxcloudrun.model import Counters, DigitalAvatar
 # from wxcloudrun.model import Counters, AIConversation
 
 # 初始化日志
@@ -54,6 +55,44 @@ def update_counterbyid(counter):
 #     """
 #     db.session.add(conversation)
 #     db.session.commit()
+
+
+# 数字分身相关DAO函数
+def insert_digital_avatar(avatar):
+    """
+    插入数字分身实体
+    :param avatar: DigitalAvatar实体
+    """
+    db.session.add(avatar)
+    db.session.commit()
+
+
+def get_digital_avatar_by_user_id(user_id):
+    """
+    根据用户ID获取数字分身
+    :param user_id: 用户ID
+    :return: 数字分身实体
+    """
+    return DigitalAvatar.query.filter(DigitalAvatar.user_id == user_id).first()
+
+
+def update_digital_avatar(avatar):
+    """
+    更新数字分身实体
+    :param avatar: DigitalAvatar实体
+    """
+    db.session.commit()
+
+
+def delete_digital_avatar_by_user_id(user_id):
+    """
+    根据用户ID删除数字分身
+    :param user_id: 用户ID
+    """
+    avatar = DigitalAvatar.query.filter(DigitalAvatar.user_id == user_id).first()
+    if avatar is not None:
+        db.session.delete(avatar)
+        db.session.commit()
 
 
 # def get_conversation_history(user_id, session_id, limit=10):

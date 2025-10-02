@@ -9,6 +9,10 @@ pymysql.install_as_MySQLdb()
 # 初始化web应用
 app = Flask(__name__, instance_relative_config=True)
 
+# 微信云托管静态文件配置
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
 # 设定数据库链接
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(config.username, 
                                                                              config.password,
@@ -24,3 +28,10 @@ from wxcloudrun import websocket_handlers
 
 # 加载配置
 app.config.from_object('config')
+
+# 微信云托管静态文件路由
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    """提供上传文件的访问"""
+    from flask import send_from_directory
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)

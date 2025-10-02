@@ -15,6 +15,21 @@ class Counters(db.Model):
     updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
 
 
+# 数字分身表
+class DigitalAvatar(db.Model):
+    # 设置结构体表格名称
+    __tablename__ = 'DigitalAvatar'
+
+    # 设定结构体对应表格的字段
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    avatar_url = db.Column(db.String(500), nullable=True)
+    created_at = db.Column('createdAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+    updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+
+
 # # AI对话记录表
 # class AIConversation(db.Model):
 #     # 设置结构体表格名称
