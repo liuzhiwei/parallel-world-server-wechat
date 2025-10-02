@@ -22,7 +22,7 @@ class WeChatCloudConfig:
         """获取上传路径"""
         if WeChatCloudConfig.WX_CLOUD_ENV == 'production':
             # 生产环境使用云存储
-            return '7072-prod-6ggpgoum0c8c2ffd-1365416418user-avatar'
+            return '7072-prod-6ggpgoum0c8c2ffd-1365416418/user-avatar'
         else:
             # 开发环境使用本地存储
             return 'uploads'
@@ -30,7 +30,9 @@ class WeChatCloudConfig:
     @staticmethod
     def get_file_url(filename):
         """获取文件访问URL"""
-        return f"/uploads/{filename}"
+        # 微信云托管环境，返回完整的HTTPS URL
+        base_url = "https://flask-lafs-172864-4-1365416418.sh.run.tcloudbase.com"
+        return f"{base_url}/uploads/{filename}"
     
     @staticmethod
     def is_allowed_file(filename):
