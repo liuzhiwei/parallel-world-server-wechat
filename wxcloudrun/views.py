@@ -32,6 +32,29 @@ def init_database():
         return make_err_response(f'数据库初始化失败: {str(e)}')
 
 
+@app.route('/api/test-db', methods=['GET'])
+def test_database():
+    """
+    测试数据库连接
+    :return: 测试结果
+    """
+    try:
+        from wxcloudrun import db
+        from wxcloudrun.model import Users, DigitalAvatar
+        
+        # 测试查询
+        user_count = Users.query.count()
+        avatar_count = DigitalAvatar.query.count()
+        
+        return make_succ_response({
+            'message': '数据库连接正常',
+            'user_count': user_count,
+            'avatar_count': avatar_count
+        })
+    except Exception as e:
+        return make_err_response(f'数据库测试失败: {str(e)}')
+
+
 @app.route('/api/upload', methods=['POST'])
 def upload_avatar():
     """
@@ -118,10 +141,20 @@ def create_profile():
             return make_err_response('头像URL不能为空')
         
         # 确保用户存在
-        ensure_user_exists(user_id)
+        try:
+            ensure_user_exists(user_id)
+            print("用户存在检查完成")
+        except Exception as e:
+            print(f"用户存在检查失败: {str(e)}")
+            return make_err_response(f'用户检查失败: {str(e)}')
         
         # 添加调试日志
-        print(f"创建分身 - user_id: {user_id}, name: {name}, description: {description}, avatar_url: {avatar_url}")
+        print(f"=== 创建分身API被调用 ===")
+        print(f"user_id: {user_id}")
+        print(f"name: {name}")
+        print(f"description: {description}")
+        print(f"avatar_url: {avatar_url}")
+        print(f"=========================")
         
         # 检查是否已存在该用户的分身
         existing_avatar = get_digital_avatar_by_user_id(user_id)
@@ -149,6 +182,7 @@ def create_profile():
             })
         else:
             # 创建新分身
+            print("创建新分身记录")
             avatar = DigitalAvatar()
             avatar.user_id = user_id
             avatar.name = name
@@ -157,7 +191,12 @@ def create_profile():
             avatar.created_at = datetime.now()
             avatar.updated_at = datetime.now()
             
-            insert_digital_avatar(avatar)
+            try:
+                insert_digital_avatar(avatar)
+                print("分身创建成功，ID:", avatar.id)
+            except Exception as e:
+                print(f"分身创建失败: {str(e)}")
+                return make_err_response(f'创建分身失败: {str(e)}')
             
             return make_succ_response({
                 'ok': True,
