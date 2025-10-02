@@ -55,6 +55,133 @@ def test_database():
         return make_err_response(f'数据库测试失败: {str(e)}')
 
 
+@app.route('/api/user', methods=['POST'])
+def create_user():
+    """
+    创建/更新用户记录
+    :return: 创建结果
+    """
+    try:
+        params = request.get_json()
+        
+        if not params or 'user_id' not in params:
+            return make_err_response('缺少用户ID')
+        
+        user_id = params['user_id']
+        
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        # 确保用户存在
+        ensure_user_exists(user_id)
+        
+        return make_succ_response({
+            'message': '用户记录创建成功',
+            'user_id': user_id
+        })
+        
+    except Exception as e:
+        return make_err_response(f'创建用户记录失败: {str(e)}')
+
+
+@app.route('/api/save-all', methods=['POST'])
+def save_all_data():
+    """
+    一次性保存所有数据（分身+伙伴+设置）
+    :return: 保存结果
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'avatar', 'partner', 'settings']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        avatar_data = params['avatar']
+        partner_data = params['partner']
+        settings_data = params['settings']
+        
+        # 验证用户ID
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        # 确保用户存在
+        ensure_user_exists(user_id)
+        
+        print(f"=== 一次性保存所有数据 ===")
+        print(f"user_id: {user_id}")
+        print(f"avatar_data: {avatar_data}")
+        print(f"partner_data: {partner_data}")
+        print(f"settings_data: {settings_data}")
+        print(f"=========================")
+        
+        # 保存分身信息
+        avatar = DigitalAvatar()
+        avatar.user_id = user_id
+        avatar.name = avatar_data['name']
+        avatar.description = avatar_data['description']
+        avatar.avatar_url = avatar_data['avatar_url']
+        avatar.created_at = datetime.now()
+        avatar.updated_at = datetime.now()
+        
+        try:
+            insert_digital_avatar(avatar)
+            print("分身创建成功，ID:", avatar.id)
+        except Exception as e:
+            print(f"分身创建失败: {str(e)}")
+            return make_err_response(f'创建分身失败: {str(e)}')
+        
+        # 保存旅行伙伴信息
+        partner = TravelPartner()
+        partner.user_id = user_id
+        partner.partner_name = partner_data['partner_name']
+        partner.partner_description = partner_data['partner_description']
+        partner.partner_avatar_url = partner_data['partner_avatar_url']
+        partner.created_at = datetime.now()
+        partner.updated_at = datetime.now()
+        
+        try:
+            insert_travel_partner(partner)
+            print("旅行伙伴创建成功，ID:", partner.id)
+        except Exception as e:
+            print(f"旅行伙伴创建失败: {str(e)}")
+            return make_err_response(f'创建旅行伙伴失败: {str(e)}')
+        
+        # 保存旅行设置信息
+        settings = TravelSettings()
+        settings.user_id = user_id
+        settings.destination = settings_data['destination']
+        settings.days = settings_data['days']
+        settings.preference = settings_data['preference']
+        settings.created_at = datetime.now()
+        settings.updated_at = datetime.now()
+        
+        try:
+            insert_travel_settings(settings)
+            print("旅行设置创建成功，ID:", settings.id)
+        except Exception as e:
+            print(f"旅行设置创建失败: {str(e)}")
+            return make_err_response(f'创建旅行设置失败: {str(e)}')
+        
+        return make_succ_response({
+            'message': '所有数据保存成功',
+            'data': {
+                'avatar_id': avatar.id,
+                'partner_id': partner.id,
+                'settings_id': settings.id
+            }
+        })
+        
+    except Exception as e:
+        return make_err_response(f'保存所有数据失败: {str(e)}')
+
+
 @app.route('/api/upload', methods=['POST'])
 def upload_avatar():
     """
