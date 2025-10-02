@@ -3,6 +3,18 @@ from datetime import datetime
 from wxcloudrun import db
 
 
+# 用户主表
+class Users(db.Model):
+    # 设置结构体表格名称
+    __tablename__ = 'Users'
+
+    # 设定结构体对应表格的字段
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False, unique=True)
+    created_at = db.Column('createdAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+    updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+
+
 # 计数表
 class Counters(db.Model):
     # 设置结构体表格名称

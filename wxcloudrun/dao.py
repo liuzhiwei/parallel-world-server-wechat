@@ -3,11 +3,43 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
-from wxcloudrun.model import Counters, DigitalAvatar, TravelPartner, TravelSettings
+from wxcloudrun.model import Users, Counters, DigitalAvatar, TravelPartner, TravelSettings
 # from wxcloudrun.model import Counters, AIConversation
 
 # 初始化日志
 logger = logging.getLogger('log')
+
+
+# 用户相关DAO函数
+def insert_user(user):
+    """
+    插入用户实体
+    :param user: Users实体
+    """
+    db.session.add(user)
+    db.session.commit()
+
+
+def get_user_by_user_id(user_id):
+    """
+    根据用户ID获取用户
+    :param user_id: 用户ID
+    :return: 用户实体
+    """
+    return Users.query.filter(Users.user_id == user_id).first()
+
+
+def ensure_user_exists(user_id):
+    """
+    确保用户存在，如果不存在则创建
+    :param user_id: 用户ID
+    :return: 用户实体
+    """
+    user = get_user_by_user_id(user_id)
+    if not user:
+        user = Users(user_id=user_id)
+        insert_user(user)
+    return user
 
 
 def query_counterbyid(id):

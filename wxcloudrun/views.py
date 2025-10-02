@@ -4,7 +4,7 @@ import uuid
 from flask import render_template, request
 from werkzeug.utils import secure_filename
 from run import app
-from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings
+from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings, ensure_user_exists
 from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings
 from wxcloudrun.response import make_succ_response, make_err_response
 from wxcloudrun.wechat_config import WeChatCloudConfig
@@ -117,6 +117,12 @@ def create_profile():
         if not avatar_url.strip():
             return make_err_response('头像URL不能为空')
         
+        # 确保用户存在
+        ensure_user_exists(user_id)
+        
+        # 添加调试日志
+        print(f"创建分身 - user_id: {user_id}, name: {name}, description: {description}, avatar_url: {avatar_url}")
+        
         # 检查是否已存在该用户的分身
         existing_avatar = get_digital_avatar_by_user_id(user_id)
         
@@ -185,22 +191,28 @@ def create_travel_partner():
             return make_err_response('请求体不能为空')
         
         # 必需参数检查
-        required_fields = ['user_id', 'partner_name']
+        required_fields = ['user_id', 'partner_name', 'partner_description', 'partner_avatar_url']
         for field in required_fields:
             if field not in params:
                 return make_err_response(f'缺少必需参数: {field}')
         
         user_id = params['user_id']
         partner_name = params['partner_name']
-        partner_description = params.get('partner_description', '')
-        partner_avatar_url = params.get('partner_avatar_url', '')
+        partner_description = params['partner_description']
+        partner_avatar_url = params['partner_avatar_url']
         
         # 验证参数
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
-        
         if not partner_name.strip():
             return make_err_response('伙伴名称不能为空')
+        if not partner_description.strip():
+            return make_err_response('伙伴性格描述不能为空')
+        if not partner_avatar_url.strip():
+            return make_err_response('伙伴头像URL不能为空')
+        
+        # 确保用户存在
+        ensure_user_exists(user_id)
         
         # 检查是否已存在
         existing_partner = get_travel_partner_by_user_id(user_id)
@@ -280,6 +292,9 @@ def create_travel_settings():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
+        # 确保用户存在
+        ensure_user_exists(user_id)
+        
         # 检查是否已存在
         existing_settings = get_travel_settings_by_user_id(user_id)
         
@@ -328,3 +343,61 @@ def create_travel_settings():
         
     except Exception as e:
         return make_err_response(f'创建旅行设置失败: {str(e)}')
+
+
+@app.route('/api/user-profile/<user_id>', methods=['GET'])
+def get_user_complete_profile(user_id):
+    """
+    获取用户完整信息（分身+伙伴+设置）
+    :param user_id: 用户ID
+    :return: 用户完整信息
+    """
+    try:
+        # 查询分身信息
+        avatar = get_digital_avatar_by_user_id(user_id)
+        # 查询伙伴信息
+        partner = get_travel_partner_by_user_id(user_id)
+        # 查询设置信息
+        settings = get_travel_settings_by_user_id(user_id)
+        
+        profile_data = {
+            'user_id': user_id,
+            'avatar': None,
+            'partner': None,
+            'settings': None
+        }
+        
+        if avatar:
+            profile_data['avatar'] = {
+                'id': avatar.id,
+                'name': avatar.name,
+                'description': avatar.description,
+                'avatar_url': avatar.avatar_url,
+                'created_at': avatar.created_at.isoformat(),
+                'updated_at': avatar.updated_at.isoformat()
+            }
+        
+        if partner:
+            profile_data['partner'] = {
+                'id': partner.id,
+                'partner_name': partner.partner_name,
+                'partner_description': partner.partner_description,
+                'partner_avatar_url': partner.partner_avatar_url,
+                'created_at': partner.created_at.isoformat(),
+                'updated_at': partner.updated_at.isoformat()
+            }
+        
+        if settings:
+            profile_data['settings'] = {
+                'id': settings.id,
+                'destination': settings.destination,
+                'days': settings.days,
+                'preference': settings.preference,
+                'created_at': settings.created_at.isoformat(),
+                'updated_at': settings.updated_at.isoformat()
+            }
+        
+        return make_succ_response(profile_data)
+        
+    except Exception as e:
+        return make_err_response(f'获取用户信息失败: {str(e)}')
