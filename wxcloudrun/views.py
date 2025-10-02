@@ -220,6 +220,77 @@ def upload_avatar():
         return make_err_response(f'文件上传失败: {str(e)}')
 
 
+@app.route('/api/upload-base64', methods=['POST'])
+def upload_avatar_base64():
+    """
+    Base64 头像上传接口
+    :return: 上传后的文件URL
+    """
+    try:
+        print(f"收到 base64 上传请求，Content-Type: {request.content_type}")
+        
+        # 获取请求参数
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['file', 'type', 'filename']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        file_data = params['file']
+        upload_type = params['type']
+        filename = params['filename']
+        
+        print(f"上传类型: {upload_type}")
+        print(f"文件名: {filename}")
+        print(f"Base64 数据长度: {len(file_data)}")
+        
+        # 检查上传类型
+        if upload_type != 'avatar':
+            return make_err_response('上传类型错误')
+        
+        # 生成安全的文件名
+        file_extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        
+        # 创建上传目录
+        upload_folder = os.path.join(WeChatCloudConfig.get_upload_path(), 'avatars')
+        print(f"上传目录: {upload_folder}")
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder, exist_ok=True)
+            print(f"创建目录: {upload_folder}")
+        
+        # 解码 base64 并保存文件
+        import base64
+        try:
+            file_bytes = base64.b64decode(file_data)
+            file_path = os.path.join(upload_folder, unique_filename)
+            print(f"保存路径: {file_path}")
+            
+            with open(file_path, 'wb') as f:
+                f.write(file_bytes)
+            
+            # 生成访问URL
+            avatar_url = WeChatCloudConfig.get_file_url(f"avatars/{unique_filename}")
+            print(f"生成URL: {avatar_url}")
+            
+            return make_succ_response({'url': avatar_url})
+            
+        except Exception as decode_error:
+            print(f"Base64 解码失败: {str(decode_error)}")
+            return make_err_response(f'Base64 解码失败: {str(decode_error)}')
+        
+    except Exception as e:
+        print(f"Base64 上传异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return make_err_response(f'Base64 上传失败: {str(e)}')
+
+
 @app.route('/api/profile', methods=['POST'])
 def create_profile():
     """
