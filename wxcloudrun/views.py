@@ -274,7 +274,7 @@ def create_travel_settings():
         user_id = params['user_id']
         destination = params.get('destination', '')
         days = params.get('days', None)
-        travel_style = params.get('travel_style', '')
+        preference = params.get('preference', '')
         
         # 验证参数
         if not user_id.strip():
@@ -287,7 +287,7 @@ def create_travel_settings():
             # 更新现有记录
             existing_settings.destination = destination
             existing_settings.days = days
-            existing_settings.travel_style = travel_style
+            existing_settings.preference = preference
             update_travel_settings(existing_settings)
             
             return make_succ_response({
@@ -297,7 +297,7 @@ def create_travel_settings():
                     'user_id': existing_settings.user_id,
                     'destination': existing_settings.destination,
                     'days': existing_settings.days,
-                    'travel_style': existing_settings.travel_style,
+                    'preference': existing_settings.preference,
                     'created_at': existing_settings.created_at.isoformat(),
                     'updated_at': existing_settings.updated_at.isoformat()
                 }
@@ -308,7 +308,7 @@ def create_travel_settings():
                 user_id=user_id,
                 destination=destination,
                 days=days,
-                travel_style=travel_style
+                preference=preference
             )
             
             insert_travel_settings(settings)
@@ -320,7 +320,7 @@ def create_travel_settings():
                     'user_id': settings.user_id,
                     'destination': settings.destination,
                     'days': settings.days,
-                    'travel_style': settings.travel_style,
+                    'preference': settings.preference,
                     'created_at': settings.created_at.isoformat(),
                     'updated_at': settings.updated_at.isoformat()
                 }
