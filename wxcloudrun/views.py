@@ -291,6 +291,48 @@ def upload_avatar_base64():
         return make_err_response(f'Base64 上传失败: {str(e)}')
 
 
+@app.route('/api/files', methods=['GET'])
+def list_uploaded_files():
+    """
+    列出已上传的文件
+    :return: 文件列表
+    """
+    try:
+        import os
+        upload_folder = os.path.join(WeChatCloudConfig.get_upload_path(), 'avatars')
+        
+        if not os.path.exists(upload_folder):
+            return make_succ_response({'files': [], 'count': 0})
+        
+        files = []
+        for filename in os.listdir(upload_folder):
+            file_path = os.path.join(upload_folder, filename)
+            if os.path.isfile(file_path):
+                file_stat = os.stat(file_path)
+                file_url = WeChatCloudConfig.get_file_url(f"avatars/{filename}")
+                files.append({
+                    'filename': filename,
+                    'url': file_url,
+                    'size': file_stat.st_size,
+                    'created': file_stat.st_ctime
+                })
+        
+        # 按创建时间排序
+        files.sort(key=lambda x: x['created'], reverse=True)
+        
+        return make_succ_response({
+            'files': files,
+            'count': len(files),
+            'upload_folder': upload_folder
+        })
+        
+    except Exception as e:
+        print(f"列出文件失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return make_err_response(f'列出文件失败: {str(e)}')
+
+
 @app.route('/api/profile', methods=['POST'])
 def create_profile():
     """
