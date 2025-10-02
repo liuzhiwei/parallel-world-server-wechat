@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
-from wxcloudrun.model import Counters, DigitalAvatar
+from wxcloudrun.model import Counters, DigitalAvatar, TravelPartner, TravelSettings
 # from wxcloudrun.model import Counters, AIConversation
 
 # 初始化日志
@@ -92,6 +92,82 @@ def delete_digital_avatar_by_user_id(user_id):
     avatar = DigitalAvatar.query.filter(DigitalAvatar.user_id == user_id).first()
     if avatar is not None:
         db.session.delete(avatar)
+        db.session.commit()
+
+
+# 旅行伙伴相关DAO函数
+def insert_travel_partner(partner):
+    """
+    插入旅行伙伴实体
+    :param partner: TravelPartner实体
+    """
+    db.session.add(partner)
+    db.session.commit()
+
+
+def get_travel_partner_by_user_id(user_id):
+    """
+    根据用户ID获取旅行伙伴
+    :param user_id: 用户ID
+    :return: 旅行伙伴实体
+    """
+    return TravelPartner.query.filter(TravelPartner.user_id == user_id).first()
+
+
+def update_travel_partner(partner):
+    """
+    更新旅行伙伴实体
+    :param partner: TravelPartner实体
+    """
+    db.session.commit()
+
+
+def delete_travel_partner_by_user_id(user_id):
+    """
+    根据用户ID删除旅行伙伴
+    :param user_id: 用户ID
+    """
+    partner = TravelPartner.query.filter(TravelPartner.user_id == user_id).first()
+    if partner is not None:
+        db.session.delete(partner)
+        db.session.commit()
+
+
+# 旅行设置相关DAO函数
+def insert_travel_settings(settings):
+    """
+    插入旅行设置实体
+    :param settings: TravelSettings实体
+    """
+    db.session.add(settings)
+    db.session.commit()
+
+
+def get_travel_settings_by_user_id(user_id):
+    """
+    根据用户ID获取旅行设置
+    :param user_id: 用户ID
+    :return: 旅行设置实体
+    """
+    return TravelSettings.query.filter(TravelSettings.user_id == user_id).first()
+
+
+def update_travel_settings(settings):
+    """
+    更新旅行设置实体
+    :param settings: TravelSettings实体
+    """
+    db.session.commit()
+
+
+def delete_travel_settings_by_user_id(user_id):
+    """
+    根据用户ID删除旅行设置
+    :param user_id: 用户ID
+    """
+    settings = TravelSettings.query.filter(TravelSettings.user_id == user_id).first()
+    if settings is not None:
+        db.session.delete(settings)
         db.session.commit()
 
 

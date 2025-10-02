@@ -30,6 +30,36 @@ class DigitalAvatar(db.Model):
     updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
 
 
+# 旅行伙伴表
+class TravelPartner(db.Model):
+    # 设置结构体表格名称
+    __tablename__ = 'TravelPartner'
+
+    # 设定结构体对应表格的字段
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False, index=True)
+    partner_name = db.Column(db.String(100), nullable=False)
+    partner_description = db.Column(db.Text, nullable=True)
+    partner_avatar_url = db.Column(db.String(500), nullable=True)
+    created_at = db.Column('createdAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+    updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+
+
+# 旅行设置表
+class TravelSettings(db.Model):
+    # 设置结构体表格名称
+    __tablename__ = 'TravelSettings'
+
+    # 设定结构体对应表格的字段
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.String(100), nullable=False, index=True)
+    destination = db.Column(db.String(200), nullable=True)
+    days = db.Column(db.Integer, nullable=True)
+    travel_style = db.Column(db.Text, nullable=True)
+    created_at = db.Column('createdAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+    updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
+
+
 # # AI对话记录表
 # class AIConversation(db.Model):
 #     # 设置结构体表格名称

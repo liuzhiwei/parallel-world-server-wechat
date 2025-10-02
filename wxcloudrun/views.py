@@ -4,8 +4,8 @@ import uuid
 from flask import render_template, request
 from werkzeug.utils import secure_filename
 from run import app
-from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar
-from wxcloudrun.model import DigitalAvatar
+from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings
+from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings
 from wxcloudrun.response import make_succ_response, make_err_response
 from wxcloudrun.wechat_config import WeChatCloudConfig
 
@@ -169,3 +169,162 @@ def create_profile():
         
     except Exception as e:
         return make_err_response(f'创建分身失败: {str(e)}')
+
+
+@app.route('/api/travel-partner', methods=['POST'])
+def create_travel_partner():
+    """
+    创建旅行伙伴接口
+    :return: 创建结果
+    """
+    try:
+        # 获取请求参数
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'partner_name']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        partner_name = params['partner_name']
+        partner_description = params.get('partner_description', '')
+        partner_avatar_url = params.get('partner_avatar_url', '')
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        if not partner_name.strip():
+            return make_err_response('伙伴名称不能为空')
+        
+        # 检查是否已存在
+        existing_partner = get_travel_partner_by_user_id(user_id)
+        
+        if existing_partner:
+            # 更新现有记录
+            existing_partner.partner_name = partner_name
+            existing_partner.partner_description = partner_description
+            existing_partner.partner_avatar_url = partner_avatar_url
+            update_travel_partner(existing_partner)
+            
+            return make_succ_response({
+                'message': '旅行伙伴更新成功',
+                'partner': {
+                    'id': existing_partner.id,
+                    'user_id': existing_partner.user_id,
+                    'partner_name': existing_partner.partner_name,
+                    'partner_description': existing_partner.partner_description,
+                    'partner_avatar_url': existing_partner.partner_avatar_url,
+                    'created_at': existing_partner.created_at.isoformat(),
+                    'updated_at': existing_partner.updated_at.isoformat()
+                }
+            })
+        else:
+            # 创建新记录
+            partner = TravelPartner(
+                user_id=user_id,
+                partner_name=partner_name,
+                partner_description=partner_description,
+                partner_avatar_url=partner_avatar_url
+            )
+            
+            insert_travel_partner(partner)
+            
+            return make_succ_response({
+                'message': '旅行伙伴创建成功',
+                'partner': {
+                    'id': partner.id,
+                    'user_id': partner.user_id,
+                    'partner_name': partner.partner_name,
+                    'partner_description': partner.partner_description,
+                    'partner_avatar_url': partner.partner_avatar_url,
+                    'created_at': partner.created_at.isoformat(),
+                    'updated_at': partner.updated_at.isoformat()
+                }
+            })
+        
+    except Exception as e:
+        return make_err_response(f'创建旅行伙伴失败: {str(e)}')
+
+
+@app.route('/api/travel-settings', methods=['POST'])
+def create_travel_settings():
+    """
+    创建旅行设置接口
+    :return: 创建结果
+    """
+    try:
+        # 获取请求参数
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        destination = params.get('destination', '')
+        days = params.get('days', None)
+        travel_style = params.get('travel_style', '')
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        # 检查是否已存在
+        existing_settings = get_travel_settings_by_user_id(user_id)
+        
+        if existing_settings:
+            # 更新现有记录
+            existing_settings.destination = destination
+            existing_settings.days = days
+            existing_settings.travel_style = travel_style
+            update_travel_settings(existing_settings)
+            
+            return make_succ_response({
+                'message': '旅行设置更新成功',
+                'settings': {
+                    'id': existing_settings.id,
+                    'user_id': existing_settings.user_id,
+                    'destination': existing_settings.destination,
+                    'days': existing_settings.days,
+                    'travel_style': existing_settings.travel_style,
+                    'created_at': existing_settings.created_at.isoformat(),
+                    'updated_at': existing_settings.updated_at.isoformat()
+                }
+            })
+        else:
+            # 创建新记录
+            settings = TravelSettings(
+                user_id=user_id,
+                destination=destination,
+                days=days,
+                travel_style=travel_style
+            )
+            
+            insert_travel_settings(settings)
+            
+            return make_succ_response({
+                'message': '旅行设置创建成功',
+                'settings': {
+                    'id': settings.id,
+                    'user_id': settings.user_id,
+                    'destination': settings.destination,
+                    'days': settings.days,
+                    'travel_style': settings.travel_style,
+                    'created_at': settings.created_at.isoformat(),
+                    'updated_at': settings.updated_at.isoformat()
+                }
+            })
+        
+    except Exception as e:
+        return make_err_response(f'创建旅行设置失败: {str(e)}')
