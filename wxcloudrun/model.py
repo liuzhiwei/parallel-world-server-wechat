@@ -55,7 +55,7 @@ class TravelSettings(db.Model):
     user_id = db.Column(db.String(100), nullable=False, index=True)
     destination = db.Column(db.String(200), nullable=True)
     days = db.Column(db.Integer, nullable=True)
-    travel_style = db.Column(db.Text, nullable=True)
+    preference = db.Column(db.Text, nullable=True)
     created_at = db.Column('createdAt', db.TIMESTAMP, nullable=False, default=datetime.now())
     updated_at = db.Column('updatedAt', db.TIMESTAMP, nullable=False, default=datetime.now())
 
