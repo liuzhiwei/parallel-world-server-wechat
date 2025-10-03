@@ -24,6 +24,21 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(con
                                                                              config.password,
                                                                              config.db_address)
 
+# 数据库连接池配置
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 10,
+    'pool_recycle': 3600,  # 1小时回收连接
+    'pool_pre_ping': True,  # 连接前检查
+    'pool_timeout': 30,
+    'max_overflow': 20,
+    'connect_args': {
+        'charset': 'utf8mb4',
+        'autocommit': True,
+        'connect_timeout': 30,
+        'read_timeout': 30,
+        'write_timeout': 30
+    }
+}
 
 # 初始化DB操作对象
 db = SQLAlchemy(app)

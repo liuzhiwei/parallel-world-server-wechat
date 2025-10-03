@@ -52,7 +52,8 @@ class Reflection:
 class ConversationContext:
     """对话上下文"""
     
-    def __init__(self, avatar_info, partner_info, travel_settings):
+    def __init__(self, user_id, avatar_info, partner_info, travel_settings):
+        self.user_id = user_id
         self.avatar_info = avatar_info
         self.partner_info = partner_info
         self.travel_settings = travel_settings

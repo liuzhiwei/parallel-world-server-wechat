@@ -39,7 +39,7 @@ class ReactConversationController:
     
     def initialize_context(self, avatar_info, partner_info, travel_settings):
         """初始化对话上下文"""
-        self.context = ConversationContext(avatar_info, partner_info, travel_settings)
+        self.context = ConversationContext(self.user_id, avatar_info, partner_info, travel_settings)
         
         # 设置初始状态
         self.context.session_state.update({

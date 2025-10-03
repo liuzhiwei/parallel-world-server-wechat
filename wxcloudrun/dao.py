@@ -171,26 +171,44 @@ def insert_chat_message(message):
     插入聊天消息
     :param message: ChatMessages实体
     """
-    try:
-        # 检查是否已存在相同的消息（防止重复插入）
-        existing = ChatMessages.query.filter(
-            ChatMessages.user_id == message.user_id,
-            ChatMessages.session_id == message.session_id,
-            ChatMessages.speaker_type == message.speaker_type,
-            ChatMessages.message == message.message
-        ).first()
-        
-        if existing:
-            print(f"消息已存在，跳过插入: {message.message[:50]}...")
-            return existing
-        
-        db.session.add(message)
-        db.session.commit()
-        return message
-    except Exception as e:
-        db.session.rollback()
-        print(f"插入消息失败: {str(e)}")
-        raise e
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # 检查是否已存在相同的消息（防止重复插入）
+            existing = ChatMessages.query.filter(
+                ChatMessages.user_id == message.user_id,
+                ChatMessages.session_id == message.session_id,
+                ChatMessages.speaker_type == message.speaker_type,
+                ChatMessages.message == message.message
+            ).first()
+            
+            if existing:
+                logger.info(f"消息已存在，跳过插入: {message.message[:50]}...")
+                return existing
+            
+            db.session.add(message)
+            db.session.commit()
+            logger.info(f"消息插入成功: {message.speaker_type}")
+            return message
+            
+        except OperationalError as e:
+            logger.warning(f"数据库操作异常 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+            db.session.rollback()
+            
+            if attempt < max_retries - 1:
+                # 重新创建session
+                db.session.remove()
+                import time
+                time.sleep(0.1 * (attempt + 1))  # 递增延迟
+                continue
+            else:
+                logger.error(f"消息插入失败，已重试 {max_retries} 次: {str(e)}")
+                raise e
+                
+        except Exception as e:
+            logger.error(f"插入消息失败: {str(e)}")
+            db.session.rollback()
+            raise e
 
 
 def get_chat_messages_by_session(user_id, session_id, limit=50):
