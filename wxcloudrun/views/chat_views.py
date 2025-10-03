@@ -5,7 +5,7 @@ from flask import request, Response, Blueprint
 from run import app
 from wxcloudrun.dao import insert_chat_message, get_chat_messages_by_session, get_user_sessions
 from wxcloudrun.model import ChatMessages
-from wxcloudrun.agent_manager import AgentManager
+from wxcloudrun.agents.agent_manager import AgentManager
 from wxcloudrun.response import make_succ_response, make_err_response
 
 # 初始化日志
