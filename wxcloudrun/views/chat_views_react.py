@@ -137,6 +137,71 @@ def start_react_auto_conversation():
         max_rounds = params.get('max_rounds', 6)
         logger.info(f"[REACT_API] 对话参数: min_rounds={min_rounds}, max_rounds={max_rounds}")
         
+        logger.info(f"[REACT_API] 开始测试推送固定消息")
+        
+        # 测试用固定消息，验证前端推送功能
+        test_messages = [
+            {
+                'speaker_type': 'avatar',
+                'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
+                'created_at': datetime.now().isoformat(),
+                'metadata': {'test': True, 'round': 1}
+            },
+            {
+                'speaker_type': 'partner',
+                'message': '嗨！我是你的旅行伙伴，让我们一起探索这个美好的目的地吧！',
+                'created_at': datetime.now().isoformat(),
+                'metadata': {'test': True, 'round': 2}
+            },
+            {
+                'speaker_type': 'avatar',
+                'message': '太好了！我已经为你准备了详细的旅行计划，包括景点推荐、美食攻略和住宿建议。',
+                'created_at': datetime.now().isoformat(),
+                'metadata': {'test': True, 'round': 3}
+            }
+        ]
+        
+        # 保存测试消息到数据库
+        logger.info(f"[REACT_API] 开始保存测试消息到数据库")
+        saved_count = 0
+        for msg_data in test_messages:
+            try:
+                msg = ChatMessages(
+                    user_id=user_id,
+                    session_id=session_id,
+                    speaker_type=msg_data['speaker_type'],
+                    message=msg_data['message']
+                )
+                insert_chat_message(msg)
+                saved_count += 1
+                logger.info(f"[REACT_API] 保存测试消息成功: {msg_data['speaker_type']}")
+            except Exception as e:
+                logger.error(f"[REACT_API] 保存测试消息失败: {str(e)}")
+        
+        logger.info(f"[REACT_API] 测试消息保存完成，保存数量: {saved_count}")
+        
+        # 构造响应数据
+        response_data = {
+            'message': 'React模式测试消息推送成功',
+            'data': {
+                'messages': test_messages,
+                'total_messages': len(test_messages),
+                'conversation_summary': {
+                    'total_rounds': 3,
+                    'total_messages': len(test_messages),
+                    'conversation_phase': 'test',
+                    'current_topic': '测试对话',
+                    'mode': 'test'
+                },
+                'mode': 'react'
+            }
+        }
+        
+        logger.info(f"[REACT_API] 准备返回测试响应，消息数量: {len(test_messages)}")
+        return make_succ_response(response_data)
+        
+        # 注释掉原来的AI生成逻辑，用于测试
+        """
         logger.info(f"[REACT_API] 开始生成React对话")
         result = agent_manager.generate_react_conversation_sync(
             min_rounds=min_rounds,
@@ -190,6 +255,7 @@ def start_react_auto_conversation():
         
         logger.info(f"[REACT_API] 准备返回响应，消息数量: {len(messages)}")
         return make_succ_response(response_data)
+        """
         
     except Exception as e:
         logger.error(f'[REACT_API] React模式自动对话生成失败: {str(e)}')
