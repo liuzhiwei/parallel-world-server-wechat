@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import uuid
+import logging
 from flask import render_template, request
 from werkzeug.utils import secure_filename
 from run import app
@@ -8,6 +9,9 @@ from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id,
 from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings
 from wxcloudrun.response import make_succ_response, make_err_response
 from wxcloudrun.wechat_config import WeChatCloudConfig
+
+# 初始化日志
+logger = logging.getLogger('log')
 
 
 @app.route('/')
@@ -72,6 +76,25 @@ def check_tables():
         return make_err_response(f'检查表结构失败: {str(e)}')
 
 
+@app.route('/api/test-log', methods=['GET'])
+def test_log():
+    """
+    测试日志输出
+    :return: 测试结果
+    """
+    try:
+        logger.info("=== 日志测试开始 ===")
+        logger.warning("这是一个警告日志")
+        logger.error("这是一个错误日志")
+        logger.info("=== 日志测试结束 ===")
+        
+        return make_succ_response({
+            'message': '日志测试完成，请检查后端日志'
+        })
+    except Exception as e:
+        return make_err_response(f'日志测试失败: {str(e)}')
+
+
 @app.route('/api/test-db', methods=['GET'])
 def test_database():
     """
@@ -106,6 +129,52 @@ def test_database():
         return make_err_response(f'数据库测试失败: {str(e)}')
 
 
+@app.route('/api/test-insert', methods=['POST'])
+def test_insert_user():
+    """
+    直接测试插入用户记录
+    :return: 插入结果
+    """
+    try:
+        from wxcloudrun import db
+        from wxcloudrun.model import Users
+        from datetime import datetime
+        
+        # 创建测试用户
+        test_user_id = f"test_user_{int(datetime.now().timestamp())}"
+        logger.info(f"=== 直接测试插入用户 ===")
+        logger.info(f"test_user_id: {test_user_id}")
+        
+        # 直接创建用户对象
+        user = Users(user_id=test_user_id)
+        logger.info(f"用户对象创建: {user}")
+        
+        # 直接插入数据库
+        db.session.add(user)
+        db.session.commit()
+        
+        logger.info(f"用户插入成功，ID: {user.id}")
+        
+        # 验证插入结果
+        inserted_user = Users.query.filter(Users.user_id == test_user_id).first()
+        if inserted_user:
+            logger.info(f"验证成功: 找到用户 ID={inserted_user.id}")
+            return make_succ_response({
+                'message': '直接插入测试成功',
+                'user_id': test_user_id,
+                'user_db_id': inserted_user.id
+            })
+        else:
+            logger.error("验证失败: 未找到插入的用户")
+            return make_err_response('插入验证失败')
+        
+    except Exception as e:
+        logger.error(f"直接插入测试失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return make_err_response(f'直接插入测试失败: {str(e)}')
+
+
 @app.route('/api/user', methods=['POST'])
 def create_user():
     """
@@ -123,21 +192,29 @@ def create_user():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
-        print(f"=== 创建用户API被调用 ===")
-        print(f"user_id: {user_id}")
-        print(f"=========================")
+        logger.info(f"=== 创建用户API被调用 ===")
+        logger.info(f"user_id: {user_id}")
+        logger.info(f"=========================")
         
         # 确保用户存在
         user = ensure_user_exists(user_id)
         
-        return make_succ_response({
-            'message': '用户记录创建成功',
-            'user_id': user_id,
-            'user_db_id': user.id
-        })
+        # 验证用户是否真的被创建
+        if user and user.id:
+            logger.info(f"用户创建验证成功: ID={user.id}, user_id={user.user_id}")
+            return make_succ_response({
+                'message': '用户记录创建成功',
+                'user_id': user_id,
+                'user_db_id': user.id
+            })
+        else:
+            logger.error("用户创建失败：用户对象为空或没有ID")
+            return make_err_response('用户创建失败')
         
     except Exception as e:
-        print(f"创建用户记录失败: {str(e)}")
+        logger.error(f"创建用户记录失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return make_err_response(f'创建用户记录失败: {str(e)}')
 
 

@@ -15,19 +15,19 @@ def insert_user(user):
     插入用户实体
     :param user: Users实体
     """
-    print(f"=== insert_user 开始 ===")
-    print(f"用户数据: user_id={user.user_id}")
+    logger.info(f"=== insert_user 开始 ===")
+    logger.info(f"用户数据: user_id={user.user_id}")
     
     try:
         db.session.add(user)
         db.session.commit()
-        print(f"用户插入成功，ID: {user.id}")
+        logger.info(f"用户插入成功，ID: {user.id}")
     except Exception as e:
-        print(f"用户插入失败: {str(e)}")
+        logger.error(f"用户插入失败: {str(e)}")
         db.session.rollback()
         raise e
     
-    print(f"=== insert_user 结束 ===")
+    logger.info(f"=== insert_user 结束 ===")
 
 
 def get_user_by_user_id(user_id):
@@ -45,25 +45,25 @@ def ensure_user_exists(user_id):
     :param user_id: 用户ID
     :return: 用户实体
     """
-    print(f"=== ensure_user_exists 开始 ===")
-    print(f"查找用户: {user_id}")
+    logger.info(f"=== ensure_user_exists 开始 ===")
+    logger.info(f"查找用户: {user_id}")
     
     user = get_user_by_user_id(user_id)
-    print(f"查找结果: {user}")
+    logger.info(f"查找结果: {user}")
     
     if not user:
-        print(f"用户不存在，创建新用户: {user_id}")
+        logger.info(f"用户不存在，创建新用户: {user_id}")
         user = Users(user_id=user_id)
         try:
             insert_user(user)
-            print(f"用户创建成功，ID: {user.id}")
+            logger.info(f"用户创建成功，ID: {user.id}")
         except Exception as e:
-            print(f"用户创建失败: {str(e)}")
+            logger.error(f"用户创建失败: {str(e)}")
             raise e
     else:
-        print(f"用户已存在，ID: {user.id}")
+        logger.info(f"用户已存在，ID: {user.id}")
     
-    print(f"=== ensure_user_exists 结束 ===")
+    logger.info(f"=== ensure_user_exists 结束 ===")
     return user
 
 
