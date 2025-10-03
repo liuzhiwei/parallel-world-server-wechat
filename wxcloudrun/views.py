@@ -5,8 +5,9 @@ import logging
 from flask import render_template, request
 from werkzeug.utils import secure_filename
 from run import app
-from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings, ensure_user_exists
-from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings
+from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings, ensure_user_exists, insert_chat_message, get_chat_messages_by_session, get_user_sessions
+from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings, ChatMessages
+from wxcloudrun.agent_manager import AgentManager
 from wxcloudrun.response import make_succ_response, make_err_response
 from wxcloudrun.wechat_config import WeChatCloudConfig
 
@@ -346,3 +347,347 @@ def get_user_complete_profile(user_id):
         
     except Exception as e:
         return make_err_response(f'获取用户信息失败: {str(e)}')
+
+
+@app.route('/api/chat/send', methods=['POST'])
+def send_chat_message():
+    """
+    发送聊天消息
+    :return: 发送结果
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'session_id', 'message']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        session_id = params['session_id']
+        message = params['message']
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        if not session_id.strip():
+            return make_err_response('会话ID不能为空')
+        if not message.strip():
+            return make_err_response('消息内容不能为空')
+        
+        # 记录分身消息（用户替分身说话）
+        avatar_msg = ChatMessages(
+            user_id=user_id,
+            session_id=session_id,
+            speaker_type='avatar',
+            message=message
+        )
+        insert_chat_message(avatar_msg)
+        
+        # 获取对话历史
+        conversation_history = get_chat_messages_by_session(user_id, session_id, limit=20)
+        history_data = []
+        for msg in conversation_history:
+            history_data.append({
+                'speaker_type': msg.speaker_type,
+                'message': msg.message,
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        # 创建智能体管理器并生成回复
+        agent_manager = AgentManager(user_id)
+        responses = agent_manager.generate_responses(message, history_data)
+        
+        # 记录伙伴回复
+        partner_msg = ChatMessages(
+            user_id=user_id,
+            session_id=session_id,
+            speaker_type='partner',
+            message=responses['partner_response']
+        )
+        insert_chat_message(partner_msg)
+        
+        # 记录分身继续回复
+        avatar_continue_msg = ChatMessages(
+            user_id=user_id,
+            session_id=session_id,
+            speaker_type='avatar',
+            message=responses['avatar_response']
+        )
+        insert_chat_message(avatar_continue_msg)
+        
+        return make_succ_response({
+            'message': '消息发送成功',
+            'data': {
+                'avatar_message': responses['avatar_message'],
+                'partner_response': responses['partner_response'],
+                'avatar_response': responses['avatar_response']
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'发送聊天消息失败: {str(e)}')
+        return make_err_response(f'发送聊天消息失败: {str(e)}')
+
+
+@app.route('/api/chat/history', methods=['GET'])
+def get_chat_history():
+    """
+    获取聊天历史
+    :return: 聊天历史
+    """
+    try:
+        user_id = request.args.get('user_id')
+        session_id = request.args.get('session_id')
+        limit = int(request.args.get('limit', 50))
+        
+        if not user_id:
+            return make_err_response('缺少user_id参数')
+        if not session_id:
+            return make_err_response('缺少session_id参数')
+        
+        # 获取聊天消息
+        messages = get_chat_messages_by_session(user_id, session_id, limit)
+        
+        # 格式化消息数据
+        history_data = []
+        for msg in messages:
+            history_data.append({
+                'id': msg.id,
+                'speaker_type': msg.speaker_type,
+                'message': msg.message,
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        return make_succ_response({
+            'message': '获取聊天历史成功',
+            'data': {
+                'history': history_data,
+                'count': len(history_data)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'获取聊天历史失败: {str(e)}')
+        return make_err_response(f'获取聊天历史失败: {str(e)}')
+
+
+@app.route('/api/chat/sessions', methods=['GET'])
+def get_user_chat_sessions():
+    """
+    获取用户的所有聊天会话
+    :return: 会话列表
+    """
+    try:
+        user_id = request.args.get('user_id')
+        limit = int(request.args.get('limit', 20))
+        
+        if not user_id:
+            return make_err_response('缺少user_id参数')
+        
+        # 获取用户会话
+        sessions = get_user_sessions(user_id, limit)
+        
+        # 按会话ID分组
+        session_dict = {}
+        for msg in sessions:
+            if msg.session_id not in session_dict:
+                session_dict[msg.session_id] = {
+                    'session_id': msg.session_id,
+                    'title': msg.session_title or f'对话 {msg.session_id[:8]}',
+                    'last_message': msg.message,
+                    'last_time': msg.created_at.isoformat(),
+                    'message_count': 0
+                }
+            session_dict[msg.session_id]['message_count'] += 1
+        
+        # 转换为列表
+        sessions_list = list(session_dict.values())
+        
+        return make_succ_response({
+            'message': '获取会话列表成功',
+            'data': {
+                'sessions': sessions_list,
+                'count': len(sessions_list)
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'获取会话列表失败: {str(e)}')
+        return make_err_response(f'获取会话列表失败: {str(e)}')
+
+
+@app.route('/api/chat/test', methods=['POST'])
+def test_chat_agents():
+    """
+    测试智能体对话功能
+    :return: 测试结果
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'message']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        message = params['message']
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        if not message.strip():
+            return make_err_response('消息内容不能为空')
+        
+        # 创建智能体管理器
+        agent_manager = AgentManager(user_id)
+        
+        # 生成伙伴回复（不保存到数据库，仅测试）
+        responses = agent_manager.generate_responses(message, [])
+        
+        return make_succ_response({
+            'message': '智能体对话测试成功',
+            'data': {
+                'avatar_message': message,
+                'partner_response': responses['partner_response'],
+                'test_time': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'智能体对话测试失败: {str(e)}')
+        return make_err_response(f'智能体对话测试失败: {str(e)}')
+
+
+@app.route('/api/chat/test-simple', methods=['GET'])
+def test_chat_simple():
+    """
+    简单测试智能体对话功能（不需要用户数据）
+    :return: 测试结果
+    """
+    try:
+        # 使用测试用户ID
+        test_user_id = "test_user_123"
+        
+        # 创建智能体管理器
+        agent_manager = AgentManager(test_user_id)
+        
+        # 模拟用户数据（用于测试）
+        agent_manager.avatar_info = type('obj', (object,), {
+            'name': '小明',
+            'description': '活泼开朗，喜欢冒险和探索新地方'
+        })()
+        
+        agent_manager.partner_info = type('obj', (object,), {
+            'partner_name': '小红',
+            'partner_description': '温柔细心，喜欢文化古迹和美食'
+        })()
+        
+        # 测试消息
+        test_message = "我们这次去哪里旅行呢？"
+        
+        # 生成伙伴回复
+        responses = agent_manager.generate_responses(test_message, [])
+        
+        return make_succ_response({
+            'message': '简单智能体对话测试成功',
+            'data': {
+                'test_user_id': test_user_id,
+                'avatar_message': responses['avatar_message'],
+                'partner_response': responses['partner_response'],
+                'avatar_response': responses['avatar_response'],
+                'test_time': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'简单智能体对话测试失败: {str(e)}')
+        return make_err_response(f'简单智能体对话测试失败: {str(e)}')
+
+
+@app.route('/api/chat/auto', methods=['POST'])
+def start_auto_conversation():
+    """
+    开始自动对话（分身和伙伴自动聊天）
+    :return: 自动对话结果
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'session_id']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        session_id = params['session_id']
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        if not session_id.strip():
+            return make_err_response('会话ID不能为空')
+        
+        # 获取对话历史
+        conversation_history = get_chat_messages_by_session(user_id, session_id, limit=20)
+        history_data = []
+        for msg in conversation_history:
+            history_data.append({
+                'speaker_type': msg.speaker_type,
+                'message': msg.message,
+                'created_at': msg.created_at.isoformat()
+            })
+        
+        # 创建智能体管理器并生成自动对话
+        agent_manager = AgentManager(user_id)
+        responses = agent_manager.generate_auto_conversation(history_data)
+        
+        # 记录自动对话消息
+        if 'avatar_message' in responses:
+            avatar_msg = ChatMessages(
+                user_id=user_id,
+                session_id=session_id,
+                speaker_type='avatar',
+                message=responses['avatar_message']
+            )
+            insert_chat_message(avatar_msg)
+        
+        if 'partner_response' in responses:
+            partner_msg = ChatMessages(
+                user_id=user_id,
+                session_id=session_id,
+                speaker_type='partner',
+                message=responses['partner_response']
+            )
+            insert_chat_message(partner_msg)
+        
+        if 'avatar_response' in responses:
+            avatar_continue_msg = ChatMessages(
+                user_id=user_id,
+                session_id=session_id,
+                speaker_type='avatar',
+                message=responses['avatar_response']
+            )
+            insert_chat_message(avatar_continue_msg)
+        
+        return make_succ_response({
+            'message': '自动对话生成成功',
+            'data': responses
+        })
+        
+    except Exception as e:
+        logger.error(f'自动对话生成失败: {str(e)}')
+        return make_err_response(f'自动对话生成失败: {str(e)}')

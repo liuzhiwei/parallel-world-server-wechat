@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
-from wxcloudrun.model import Users, DigitalAvatar, TravelPartner, TravelSettings
+from wxcloudrun.model import Users, DigitalAvatar, TravelPartner, TravelSettings, ChatMessages
 
 # 初始化日志
 logger = logging.getLogger('log')
@@ -165,15 +165,43 @@ def delete_travel_settings_by_user_id(user_id):
         db.session.commit()
 
 
-# def get_conversation_history(user_id, session_id, limit=10):
-#     """
-#     获取用户对话历史
-#     :param user_id: 用户ID
-#     :param session_id: 会话ID
-#     :param limit: 限制条数
-#     :return: 对话历史列表
-#     """
-#     return AIConversation.query.filter(
-#         AIConversation.user_id == user_id,
-#         AIConversation.session_id == session_id
-#     ).order_by(AIConversation.created_at.desc()).limit(limit).all()
+# 聊天消息相关DAO函数
+def insert_chat_message(message):
+    """
+    插入聊天消息
+    :param message: ChatMessages实体
+    """
+    try:
+        db.session.add(message)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+
+def get_chat_messages_by_session(user_id, session_id, limit=50):
+    """
+    根据用户ID和会话ID获取聊天消息
+    :param user_id: 用户ID
+    :param session_id: 会话ID
+    :param limit: 限制数量
+    :return: 聊天消息列表
+    """
+    return ChatMessages.query.filter(
+        ChatMessages.user_id == user_id,
+        ChatMessages.session_id == session_id
+    ).order_by(ChatMessages.created_at.asc()).limit(limit).all()
+
+
+def get_user_sessions(user_id, limit=20):
+    """
+    获取用户的所有会话
+    :param user_id: 用户ID
+    :param limit: 限制数量
+    :return: 会话列表
+    """
+    return ChatMessages.query.filter(
+        ChatMessages.user_id == user_id
+    ).order_by(ChatMessages.created_at.desc()).limit(limit).all()
+
+
