@@ -183,21 +183,18 @@ def start_react_auto_conversation():
         
         logger.info(f"[REACT_API] 生成消息完成，消息数量: {len(test_messages)}")
         
-        # 构造响应数据
+        # 构造响应数据 - 直接在 data 层包含 messages
         response_data = {
-            'message': 'React模式对话生成成功',
-            'data': {
-                'messages': test_messages,
+            'messages': test_messages,
+            'total_messages': len(test_messages),
+            'conversation_summary': {
+                'total_rounds': 1,
                 'total_messages': len(test_messages),
-                'conversation_summary': {
-                    'total_rounds': 1,
-                    'total_messages': len(test_messages),
-                    'conversation_phase': 'test',
-                    'current_topic': '测试对话',
-                    'mode': 'test'
-                },
-                'mode': 'react'
-            }
+                'conversation_phase': 'test',
+                'current_topic': '测试对话',
+                'mode': 'test'
+            },
+            'mode': 'react'
         }
         
         logger.info(f"[REACT_API] 准备返回响应，消息数量: {len(test_messages)}")
