@@ -76,25 +76,6 @@ def check_tables():
         return make_err_response(f'检查表结构失败: {str(e)}')
 
 
-@app.route('/api/test-log', methods=['GET'])
-def test_log():
-    """
-    测试日志输出
-    :return: 测试结果
-    """
-    try:
-        logger.info("=== 日志测试开始 ===")
-        logger.warning("这是一个警告日志")
-        logger.error("这是一个错误日志")
-        logger.info("=== 日志测试结束 ===")
-        
-        return make_succ_response({
-            'message': '日志测试完成，请检查后端日志'
-        })
-    except Exception as e:
-        return make_err_response(f'日志测试失败: {str(e)}')
-
-
 @app.route('/api/test-db', methods=['GET'])
 def test_database():
     """
@@ -129,52 +110,6 @@ def test_database():
         return make_err_response(f'数据库测试失败: {str(e)}')
 
 
-@app.route('/api/test-insert', methods=['POST'])
-def test_insert_user():
-    """
-    直接测试插入用户记录
-    :return: 插入结果
-    """
-    try:
-        from wxcloudrun import db
-        from wxcloudrun.model import Users
-        from datetime import datetime
-        
-        # 创建测试用户
-        test_user_id = f"test_user_{int(datetime.now().timestamp())}"
-        logger.info(f"=== 直接测试插入用户 ===")
-        logger.info(f"test_user_id: {test_user_id}")
-        
-        # 直接创建用户对象
-        user = Users(user_id=test_user_id)
-        logger.info(f"用户对象创建: {user}")
-        
-        # 直接插入数据库
-        db.session.add(user)
-        db.session.commit()
-        
-        logger.info(f"用户插入成功，ID: {user.id}")
-        
-        # 验证插入结果
-        inserted_user = Users.query.filter(Users.user_id == test_user_id).first()
-        if inserted_user:
-            logger.info(f"验证成功: 找到用户 ID={inserted_user.id}")
-            return make_succ_response({
-                'message': '直接插入测试成功',
-                'user_id': test_user_id,
-                'user_db_id': inserted_user.id
-            })
-        else:
-            logger.error("验证失败: 未找到插入的用户")
-            return make_err_response('插入验证失败')
-        
-    except Exception as e:
-        logger.error(f"直接插入测试失败: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return make_err_response(f'直接插入测试失败: {str(e)}')
-
-
 @app.route('/api/user', methods=['POST'])
 def create_user():
     """
@@ -192,29 +127,17 @@ def create_user():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
-        logger.info(f"=== 创建用户API被调用 ===")
-        logger.info(f"user_id: {user_id}")
-        logger.info(f"=========================")
-        
         # 确保用户存在
         user = ensure_user_exists(user_id)
         
-        # 验证用户是否真的被创建
-        if user and user.id:
-            logger.info(f"用户创建验证成功: ID={user.id}, user_id={user.user_id}")
-            return make_succ_response({
-                'message': '用户记录创建成功',
-                'user_id': user_id,
-                'user_db_id': user.id
-            })
-        else:
-            logger.error("用户创建失败：用户对象为空或没有ID")
-            return make_err_response('用户创建失败')
+        return make_succ_response({
+            'message': '用户记录创建成功',
+            'user_id': user_id,
+            'user_db_id': user.id
+        })
         
     except Exception as e:
         logger.error(f"创建用户记录失败: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return make_err_response(f'创建用户记录失败: {str(e)}')
 
 
@@ -248,60 +171,32 @@ def save_all_data():
         # 确保用户存在
         ensure_user_exists(user_id)
         
-        logger.info(f"=== 一次性保存所有数据 ===")
-        logger.info(f"user_id: {user_id}")
-        logger.info(f"avatar_data: {avatar_data}")
-        logger.info(f"partner_data: {partner_data}")
-        logger.info(f"settings_data: {settings_data}")
-        logger.info(f"=========================")
-        
         # 保存分身信息
-        avatar = DigitalAvatar()
-        avatar.user_id = user_id
-        avatar.name = avatar_data['name']
-        avatar.description = avatar_data['description']
-        avatar.avatar_url = avatar_data['avatar_url']
-        avatar.created_at = datetime.now()
-        avatar.updated_at = datetime.now()
-        
-        try:
-            insert_digital_avatar(avatar)
-            logger.info(f"分身创建成功，ID: {avatar.id}")
-        except Exception as e:
-            logger.error(f"分身创建失败: {str(e)}")
-            return make_err_response(f'创建分身失败: {str(e)}')
+        avatar = DigitalAvatar(
+            user_id=user_id,
+            name=avatar_data['name'],
+            description=avatar_data['description'],
+            avatar_url=avatar_data['avatar_url']
+        )
+        insert_digital_avatar(avatar)
         
         # 保存旅行伙伴信息
-        partner = TravelPartner()
-        partner.user_id = user_id
-        partner.partner_name = partner_data['partner_name']
-        partner.partner_description = partner_data['partner_description']
-        partner.partner_avatar_url = partner_data['partner_avatar_url']
-        partner.created_at = datetime.now()
-        partner.updated_at = datetime.now()
-        
-        try:
-            insert_travel_partner(partner)
-            logger.info(f"旅行伙伴创建成功，ID: {partner.id}")
-        except Exception as e:
-            logger.error(f"旅行伙伴创建失败: {str(e)}")
-            return make_err_response(f'创建旅行伙伴失败: {str(e)}')
+        partner = TravelPartner(
+            user_id=user_id,
+            partner_name=partner_data['partner_name'],
+            partner_description=partner_data['partner_description'],
+            partner_avatar_url=partner_data['partner_avatar_url']
+        )
+        insert_travel_partner(partner)
         
         # 保存旅行设置信息
-        settings = TravelSettings()
-        settings.user_id = user_id
-        settings.destination = settings_data['destination']
-        settings.days = settings_data['days']
-        settings.preference = settings_data['preference']
-        settings.created_at = datetime.now()
-        settings.updated_at = datetime.now()
-        
-        try:
-            insert_travel_settings(settings)
-            logger.info(f"旅行设置创建成功，ID: {settings.id}")
-        except Exception as e:
-            logger.error(f"旅行设置创建失败: {str(e)}")
-            return make_err_response(f'创建旅行设置失败: {str(e)}')
+        settings = TravelSettings(
+            user_id=user_id,
+            destination=settings_data['destination'],
+            days=settings_data['days'],
+            preference=settings_data['preference']
+        )
+        insert_travel_settings(settings)
         
         return make_succ_response({
             'message': '所有数据保存成功',
@@ -313,6 +208,7 @@ def save_all_data():
         })
         
     except Exception as e:
+        logger.error(f'保存所有数据失败: {str(e)}')
         return make_err_response(f'保存所有数据失败: {str(e)}')
 
 
@@ -370,279 +266,28 @@ def upload_avatar():
 @app.route('/api/profile', methods=['POST'])
 def create_profile():
     """
-    创建数字分身接口
+    创建数字分身接口（已废弃，请使用 /api/save-all）
     :return: 创建结果
     """
-    try:
-        # 获取请求参数
-        params = request.get_json()
-        
-        if not params:
-            return make_err_response('请求体不能为空')
-        
-        # 必需参数检查
-        required_fields = ['user_id', 'name', 'description', 'avatar_url']
-        for field in required_fields:
-            if field not in params:
-                return make_err_response(f'缺少必需参数: {field}')
-        
-        user_id = params['user_id']
-        name = params['name']
-        description = params['description']
-        avatar_url = params['avatar_url']
-        
-        # 验证参数
-        if not user_id.strip():
-            return make_err_response('用户ID不能为空')
-        if not name.strip():
-            return make_err_response('分身名称不能为空')
-        if not description.strip():
-            return make_err_response('性格描述不能为空')
-        if not avatar_url.strip():
-            return make_err_response('头像URL不能为空')
-        
-        # 确保用户存在
-        try:
-            ensure_user_exists(user_id)
-            print("用户存在检查完成")
-        except Exception as e:
-            print(f"用户存在检查失败: {str(e)}")
-            return make_err_response(f'用户检查失败: {str(e)}')
-        
-        # 添加调试日志
-        print(f"=== 创建分身API被调用 ===")
-        print(f"user_id: {user_id}")
-        print(f"name: {name}")
-        print(f"description: {description}")
-        print(f"avatar_url: {avatar_url}")
-        print(f"=========================")
-        
-        # 检查是否已存在该用户的分身
-        existing_avatar = get_digital_avatar_by_user_id(user_id)
-        
-        if existing_avatar:
-            # 更新现有分身
-            existing_avatar.name = name
-            existing_avatar.description = description
-            existing_avatar.avatar_url = avatar_url
-            existing_avatar.updated_at = datetime.now()
-            update_digital_avatar(existing_avatar)
-            
-            return make_succ_response({
-                'ok': True,
-                'message': '分身信息更新成功',
-                'avatar': {
-                    'id': existing_avatar.id,
-                    'user_id': existing_avatar.user_id,
-                    'name': existing_avatar.name,
-                    'description': existing_avatar.description,
-                    'avatar_url': existing_avatar.avatar_url,
-                    'created_at': existing_avatar.created_at.isoformat(),
-                    'updated_at': existing_avatar.updated_at.isoformat()
-                }
-            })
-        else:
-            # 创建新分身
-            print("创建新分身记录")
-            avatar = DigitalAvatar()
-            avatar.user_id = user_id
-            avatar.name = name
-            avatar.description = description
-            avatar.avatar_url = avatar_url
-            avatar.created_at = datetime.now()
-            avatar.updated_at = datetime.now()
-            
-            try:
-                insert_digital_avatar(avatar)
-                print("分身创建成功，ID:", avatar.id)
-            except Exception as e:
-                print(f"分身创建失败: {str(e)}")
-                return make_err_response(f'创建分身失败: {str(e)}')
-            
-            return make_succ_response({
-                'ok': True,
-                'message': '分身创建成功',
-                'avatar': {
-                    'id': avatar.id,
-                    'user_id': avatar.user_id,
-                    'name': avatar.name,
-                    'description': avatar.description,
-                    'avatar_url': avatar.avatar_url,
-                    'created_at': avatar.created_at.isoformat(),
-                    'updated_at': avatar.updated_at.isoformat()
-                }
-            })
-        
-    except Exception as e:
-        return make_err_response(f'创建分身失败: {str(e)}')
+    return make_err_response('此接口已废弃，请使用 /api/save-all 接口')
 
 
 @app.route('/api/travel-partner', methods=['POST'])
 def create_travel_partner():
     """
-    创建旅行伙伴接口
+    创建旅行伙伴接口（已废弃，请使用 /api/save-all）
     :return: 创建结果
     """
-    try:
-        # 获取请求参数
-        params = request.get_json()
-        
-        if not params:
-            return make_err_response('请求体不能为空')
-        
-        # 必需参数检查
-        required_fields = ['user_id', 'partner_name', 'partner_description', 'partner_avatar_url']
-        for field in required_fields:
-            if field not in params:
-                return make_err_response(f'缺少必需参数: {field}')
-        
-        user_id = params['user_id']
-        partner_name = params['partner_name']
-        partner_description = params['partner_description']
-        partner_avatar_url = params['partner_avatar_url']
-        
-        # 验证参数
-        if not user_id.strip():
-            return make_err_response('用户ID不能为空')
-        if not partner_name.strip():
-            return make_err_response('伙伴名称不能为空')
-        if not partner_description.strip():
-            return make_err_response('伙伴性格描述不能为空')
-        if not partner_avatar_url.strip():
-            return make_err_response('伙伴头像URL不能为空')
-        
-        # 确保用户存在
-        ensure_user_exists(user_id)
-        
-        # 检查是否已存在
-        existing_partner = get_travel_partner_by_user_id(user_id)
-        
-        if existing_partner:
-            # 更新现有记录
-            existing_partner.partner_name = partner_name
-            existing_partner.partner_description = partner_description
-            existing_partner.partner_avatar_url = partner_avatar_url
-            update_travel_partner(existing_partner)
-            
-            return make_succ_response({
-                'message': '旅行伙伴更新成功',
-                'partner': {
-                    'id': existing_partner.id,
-                    'user_id': existing_partner.user_id,
-                    'partner_name': existing_partner.partner_name,
-                    'partner_description': existing_partner.partner_description,
-                    'partner_avatar_url': existing_partner.partner_avatar_url,
-                    'created_at': existing_partner.created_at.isoformat(),
-                    'updated_at': existing_partner.updated_at.isoformat()
-                }
-            })
-        else:
-            # 创建新记录
-            partner = TravelPartner(
-                user_id=user_id,
-                partner_name=partner_name,
-                partner_description=partner_description,
-                partner_avatar_url=partner_avatar_url
-            )
-            
-            insert_travel_partner(partner)
-            
-            return make_succ_response({
-                'message': '旅行伙伴创建成功',
-                'partner': {
-                    'id': partner.id,
-                    'user_id': partner.user_id,
-                    'partner_name': partner.partner_name,
-                    'partner_description': partner.partner_description,
-                    'partner_avatar_url': partner.partner_avatar_url,
-                    'created_at': partner.created_at.isoformat(),
-                    'updated_at': partner.updated_at.isoformat()
-                }
-            })
-        
-    except Exception as e:
-        return make_err_response(f'创建旅行伙伴失败: {str(e)}')
+    return make_err_response('此接口已废弃，请使用 /api/save-all 接口')
 
 
 @app.route('/api/travel-settings', methods=['POST'])
 def create_travel_settings():
     """
-    创建旅行设置接口
+    创建旅行设置接口（已废弃，请使用 /api/save-all）
     :return: 创建结果
     """
-    try:
-        # 获取请求参数
-        params = request.get_json()
-        
-        if not params:
-            return make_err_response('请求体不能为空')
-        
-        # 必需参数检查
-        required_fields = ['user_id']
-        for field in required_fields:
-            if field not in params:
-                return make_err_response(f'缺少必需参数: {field}')
-        
-        user_id = params['user_id']
-        destination = params.get('destination', '')
-        days = params.get('days', None)
-        preference = params.get('preference', '')
-        
-        # 验证参数
-        if not user_id.strip():
-            return make_err_response('用户ID不能为空')
-        
-        # 确保用户存在
-        ensure_user_exists(user_id)
-        
-        # 检查是否已存在
-        existing_settings = get_travel_settings_by_user_id(user_id)
-        
-        if existing_settings:
-            # 更新现有记录
-            existing_settings.destination = destination
-            existing_settings.days = days
-            existing_settings.preference = preference
-            update_travel_settings(existing_settings)
-            
-            return make_succ_response({
-                'message': '旅行设置更新成功',
-                'settings': {
-                    'id': existing_settings.id,
-                    'user_id': existing_settings.user_id,
-                    'destination': existing_settings.destination,
-                    'days': existing_settings.days,
-                    'preference': existing_settings.preference,
-                    'created_at': existing_settings.created_at.isoformat(),
-                    'updated_at': existing_settings.updated_at.isoformat()
-                }
-            })
-        else:
-            # 创建新记录
-            settings = TravelSettings(
-                user_id=user_id,
-                destination=destination,
-                days=days,
-                preference=preference
-            )
-            
-            insert_travel_settings(settings)
-            
-            return make_succ_response({
-                'message': '旅行设置创建成功',
-                'settings': {
-                    'id': settings.id,
-                    'user_id': settings.user_id,
-                    'destination': settings.destination,
-                    'days': settings.days,
-                    'preference': settings.preference,
-                    'created_at': settings.created_at.isoformat(),
-                    'updated_at': settings.updated_at.isoformat()
-                }
-            })
-        
-    except Exception as e:
-        return make_err_response(f'创建旅行设置失败: {str(e)}')
+    return make_err_response('此接口已废弃，请使用 /api/save-all 接口')
 
 
 @app.route('/api/user-profile/<user_id>', methods=['GET'])
