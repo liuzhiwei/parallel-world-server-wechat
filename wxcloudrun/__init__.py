@@ -36,6 +36,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(con
                                                                              config.password,
                                                                              config.db_address)
 
+# 禁用SQLAlchemy修改跟踪（减少开销）
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 # 数据库连接池配置
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     'pool_size': 10,
