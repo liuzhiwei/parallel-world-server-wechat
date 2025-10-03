@@ -322,30 +322,25 @@ class AgentManager:
             'message_index': message_index + 1
         }
     
-    def generate_auto_conversation_stream(self, conversation_history):
+    def generate_auto_conversation_stream(self, conversation_history, min_rounds=3, max_rounds=6):
         """生成自动对话流（仅返回业务数据）"""
         try:
             # 确保用户数据已加载
             self.load_user_data()
             
-            # 生成自动对话
-            responses = self.generate_auto_conversation(conversation_history)
+            # 生成对话计划
+            plan = self.generate_conversation_plan(min_rounds, max_rounds)
             
-            # 按顺序返回消息
-            message_order = []
-            if 'avatar_message' in responses:
-                message_order.append(('avatar', responses['avatar_message']))
-            if 'partner_response' in responses:
-                message_order.append(('partner', responses['partner_response']))
-            if 'avatar_response' in responses:
-                message_order.append(('avatar', responses['avatar_response']))
-            
-            # 逐条返回消息
-            for speaker_type, message_content in message_order:
-                yield {
-                    'speaker_type': speaker_type,
-                    'message': message_content
-                }
+            # 根据计划生成对话
+            for round_info in plan['rounds']:
+                # 生成当前轮次的对话
+                for message_info in round_info['messages']:
+                    if message_info['speaker'] == 'avatar':
+                        response = self._generate_avatar_message_by_plan(message_info, conversation_history)
+                    else:
+                        response = self._generate_partner_message_by_plan(message_info, conversation_history)
+                    
+                    yield from self._push_message(message_info['speaker'], response, conversation_history, len(conversation_history))
             
         except Exception as e:
             logger.error(f"生成自动对话流失败: {str(e)}")
