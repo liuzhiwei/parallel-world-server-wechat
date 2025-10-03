@@ -2,6 +2,18 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import pymysql
 import config
+import logging
+import sys
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),  # 输出到控制台
+        logging.FileHandler('app.log')      # 输出到文件
+    ]
+)
 
 # 因MySQLDB不支持Python3，使用pymysql扩展库代替MySQLDB库
 pymysql.install_as_MySQLdb()

@@ -18,6 +18,65 @@ logger = logging.getLogger('log')
 react_chat_bp = Blueprint('react_chat', __name__, url_prefix='/api/react_chat')
 
 
+@react_chat_bp.route('/health', methods=['GET'])
+def health_check():
+    """健康检查接口"""
+    try:
+        logger.info(f"[REACT_API] ========== 收到健康检查请求 ==========")
+        logger.info(f"[REACT_API] 请求来源: {request.remote_addr}")
+        logger.info(f"[REACT_API] 请求方法: {request.method}")
+        logger.info(f"[REACT_API] 请求URL: {request.url}")
+        
+        response_data = {
+            'status': 'healthy',
+            'message': 'React API is working',
+            'timestamp': datetime.now().isoformat(),
+            'routes': [
+                '/api/react_chat/health',
+                '/api/react_chat/auto',
+                '/api/react_chat/debug',
+                '/api/react_chat/reset'
+            ]
+        }
+        
+        logger.info(f"[REACT_API] 健康检查成功，返回数据: {response_data}")
+        return make_succ_response(response_data)
+    except Exception as e:
+        logger.error(f'[REACT_API] 健康检查失败: {str(e)}')
+        import traceback
+        logger.error(f'[REACT_API] 错误堆栈: {traceback.format_exc()}')
+        return make_err_response(f'健康检查失败: {str(e)}')
+
+
+@react_chat_bp.route('/test', methods=['POST'])
+def test_react_api():
+    """测试React API接口"""
+    try:
+        logger.info(f"[REACT_API] ========== 收到测试请求 ==========")
+        logger.info(f"[REACT_API] 请求来源: {request.remote_addr}")
+        logger.info(f"[REACT_API] 请求方法: {request.method}")
+        logger.info(f"[REACT_API] 请求URL: {request.url}")
+        logger.info(f"[REACT_API] 请求头: {dict(request.headers)}")
+        
+        params = request.get_json()
+        logger.info(f"[REACT_API] 请求参数: {params}")
+        
+        response_data = {
+            'status': 'success',
+            'message': 'React API test successful',
+            'received_params': params,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        logger.info(f"[REACT_API] 测试成功，返回数据: {response_data}")
+        return make_succ_response(response_data)
+    except Exception as e:
+        logger.error(f'[REACT_API] 测试失败: {str(e)}')
+        import traceback
+        logger.error(f'[REACT_API] 错误堆栈: {traceback.format_exc()}')
+        return make_err_response(f'测试失败: {str(e)}')
+
+
 @react_chat_bp.route('/auto', methods=['POST'])
 def start_react_auto_conversation():
     """
@@ -25,16 +84,19 @@ def start_react_auto_conversation():
     :return: React模式自动对话结果
     """
     try:
-        logger.info(f"[REACT_API] 收到React自动对话请求")
+        logger.info(f"[REACT_API] ========== 收到React自动对话请求 ==========")
         logger.info(f"[REACT_API] 请求来源: {request.remote_addr}")
+        logger.info(f"[REACT_API] 请求方法: {request.method}")
+        logger.info(f"[REACT_API] 请求URL: {request.url}")
         logger.info(f"[REACT_API] 请求头: {dict(request.headers)}")
+        logger.info(f"[REACT_API] 请求数据大小: {len(request.get_data())} 字节")
         
         params = request.get_json()
         logger.info(f"[REACT_API] 请求参数: {params}")
         
         if not params:
-            logger.error("[REACT_API] 请求体为空")
-            return make_err_response('请求体不能为空')
+            logger.warning(f"[REACT_API] 请求参数为空")
+            return make_err_response('请求参数不能为空')
         
         required_fields = ['user_id', 'session_id']
         for field in required_fields:
