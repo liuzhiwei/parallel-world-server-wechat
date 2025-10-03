@@ -46,10 +46,21 @@ def test_database():
         user_count = Users.query.count()
         avatar_count = DigitalAvatar.query.count()
         
+        # 列出所有用户记录
+        users = Users.query.all()
+        user_list = []
+        for user in users:
+            user_list.append({
+                'id': user.id,
+                'user_id': user.user_id,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            })
+        
         return make_succ_response({
             'message': '数据库连接正常',
             'user_count': user_count,
-            'avatar_count': avatar_count
+            'avatar_count': avatar_count,
+            'users': user_list
         })
     except Exception as e:
         return make_err_response(f'数据库测试失败: {str(e)}')
@@ -72,15 +83,21 @@ def create_user():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
+        print(f"=== 创建用户API被调用 ===")
+        print(f"user_id: {user_id}")
+        print(f"=========================")
+        
         # 确保用户存在
-        ensure_user_exists(user_id)
+        user = ensure_user_exists(user_id)
         
         return make_succ_response({
             'message': '用户记录创建成功',
-            'user_id': user_id
+            'user_id': user_id,
+            'user_db_id': user.id
         })
         
     except Exception as e:
+        print(f"创建用户记录失败: {str(e)}")
         return make_err_response(f'创建用户记录失败: {str(e)}')
 
 
