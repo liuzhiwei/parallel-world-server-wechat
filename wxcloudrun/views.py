@@ -2,7 +2,8 @@ from datetime import datetime
 import os
 import uuid
 import logging
-from flask import render_template, request
+import json
+from flask import render_template, request, Response
 from werkzeug.utils import secure_filename
 from run import app
 from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings, ensure_user_exists, insert_chat_message, get_chat_messages_by_session, get_user_sessions
@@ -514,7 +515,7 @@ def get_user_chat_sessions():
 @app.route('/api/chat/test', methods=['POST'])
 def test_chat_agents():
     """
-    测试智能体对话功能
+    测试两个智能体自动对话功能
     :return: 测试结果
     """
     try:
@@ -524,38 +525,144 @@ def test_chat_agents():
             return make_err_response('请求体不能为空')
         
         # 必需参数检查
-        required_fields = ['user_id', 'message']
+        required_fields = ['user_id']
         for field in required_fields:
             if field not in params:
                 return make_err_response(f'缺少必需参数: {field}')
         
         user_id = params['user_id']
-        message = params['message']
         
         # 验证参数
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
-        if not message.strip():
-            return make_err_response('消息内容不能为空')
         
         # 创建智能体管理器
         agent_manager = AgentManager(user_id)
         
-        # 生成伙伴回复（不保存到数据库，仅测试）
-        responses = agent_manager.generate_responses_by_user_input(message, [])
+        # 生成自动对话（不保存到数据库，仅测试）
+        responses = agent_manager.generate_auto_conversation([])
         
         return make_succ_response({
-            'message': '智能体对话测试成功',
+            'message': '智能体自动对话测试成功',
             'data': {
-                'avatar_message': message,
-                'partner_response': responses['partner_response'],
+                'user_id': user_id,
+                'conversation': responses,
                 'test_time': datetime.now().isoformat()
             }
         })
         
     except Exception as e:
-        logger.error(f'智能体对话测试失败: {str(e)}')
-        return make_err_response(f'智能体对话测试失败: {str(e)}')
+        logger.error(f'智能体自动对话测试失败: {str(e)}')
+        return make_err_response(f'智能体自动对话测试失败: {str(e)}')
+
+
+@app.route('/api/chat/multi-round', methods=['POST'])
+def test_multi_round_conversation():
+    """
+    测试多轮智能体对话（流式推送）
+    :return: 流式响应
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        min_rounds = params.get('min_rounds', 10)
+        max_rounds = params.get('max_rounds', 20)
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        # 创建智能体管理器
+        agent_manager = AgentManager(user_id)
+        
+        def generate_stream():
+            try:
+                # 发送开始信号
+                yield f"data: {json.dumps({'type': 'start', 'min_rounds': min_rounds, 'max_rounds': max_rounds})}\n\n"
+                
+                # 逐句生成并推送对话
+                message_count = 0
+                for message in agent_manager.generate_multi_round_conversation_stream(min_rounds, max_rounds):
+                    message_count += 1
+                    yield f"data: {json.dumps({'type': 'message', 'data': message})}\n\n"
+                    import time
+                    time.sleep(1)  # 每句话间隔1秒，模拟真实对话节奏
+                
+                # 发送结束信号
+                yield f"data: {json.dumps({'type': 'end', 'summary': {'total_messages': message_count}})}\n\n"
+                
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        return Response(
+            generate_stream(),
+            mimetype='text/event-stream',
+            headers={
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f'多轮对话测试失败: {str(e)}')
+        return make_err_response(f'多轮对话测试失败: {str(e)}')
+
+
+@app.route('/api/chat/test-plan', methods=['POST'])
+def test_conversation_plan():
+    """
+    测试对话计划生成功能
+    :return: 对话计划
+    """
+    try:
+        params = request.get_json()
+        
+        if not params:
+            return make_err_response('请求体不能为空')
+        
+        # 必需参数检查
+        required_fields = ['user_id', 'min_rounds', 'max_rounds']
+        for field in required_fields:
+            if field not in params:
+                return make_err_response(f'缺少必需参数: {field}')
+        
+        user_id = params['user_id']
+        min_rounds = params['min_rounds']
+        max_rounds = params['max_rounds']
+        
+        # 验证参数
+        if not user_id.strip():
+            return make_err_response('用户ID不能为空')
+        
+        # 创建智能体管理器
+        agent_manager = AgentManager(user_id)
+        
+        # 生成对话计划
+        plan = agent_manager.generate_conversation_plan(min_rounds, max_rounds)
+        
+        return make_succ_response({
+            'message': '对话计划生成成功',
+            'data': {
+                'user_id': user_id,
+                'plan': plan,
+                'test_time': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f'对话计划测试失败: {str(e)}')
+        return make_err_response(f'对话计划测试失败: {str(e)}')
 
 
 @app.route('/api/chat/test-simple', methods=['GET'])
