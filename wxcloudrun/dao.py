@@ -172,10 +172,24 @@ def insert_chat_message(message):
     :param message: ChatMessages实体
     """
     try:
+        # 检查是否已存在相同的消息（防止重复插入）
+        existing = ChatMessages.query.filter(
+            ChatMessages.user_id == message.user_id,
+            ChatMessages.session_id == message.session_id,
+            ChatMessages.speaker_type == message.speaker_type,
+            ChatMessages.message == message.message
+        ).first()
+        
+        if existing:
+            print(f"消息已存在，跳过插入: {message.message[:50]}...")
+            return existing
+        
         db.session.add(message)
         db.session.commit()
+        return message
     except Exception as e:
         db.session.rollback()
+        print(f"插入消息失败: {str(e)}")
         raise e
 
 
