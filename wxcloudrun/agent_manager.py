@@ -88,10 +88,10 @@ class AgentManager:
                 if msg['speaker_type'] == 'avatar':
                     messages.append({"role": "assistant", "content": msg['message']})
                 elif msg['speaker_type'] == 'partner':
-                    messages.append({"role": "user", "content": f"[{self.partner_info.partner_name}]: {msg['message']}"})
+                    messages.append({"role": "user", "content": f"{self.partner_info.partner_name}: {msg['message']}"})
             
             # 添加当前伙伴消息
-            messages.append({"role": "user", "content": f"[{self.partner_info.partner_name}]: {partner_message}"})
+            messages.append({"role": "user", "content": f"{self.partner_info.partner_name}: {partner_message}"})
             
             # 调用AI服务
             api_response = self.ai_service.chat_completion(
@@ -119,12 +119,12 @@ class AgentManager:
             # 添加对话历史
             for msg in conversation_history[-10:]:  # 只保留最近10条消息
                 if msg['speaker_type'] == 'avatar':
-                    messages.append({"role": "user", "content": f"[{self.avatar_info.name}]: {msg['message']}"})
+                    messages.append({"role": "user", "content": f"{self.avatar_info.name}: {msg['message']}"})
                 elif msg['speaker_type'] == 'partner':
                     messages.append({"role": "assistant", "content": msg['message']})
             
             # 添加当前分身消息
-            messages.append({"role": "user", "content": f"[{self.avatar_info.name}]: {avatar_message}"])
+            messages.append({"role": "user", "content": f"{self.avatar_info.name}: {avatar_message}"})
             
             # 调用AI服务
             api_response = self.ai_service.chat_completion(
