@@ -96,7 +96,7 @@ class AgentManager:
             
             # 添加对话历史
             for msg in conversation_history[-10:]:  # 只保留最近10条消息
-                if msg['speaker_type'] == 'avatar':
+                if msg['speaker_type'] == 'user' or msg['speaker_type'] == 'avatar':
                     messages.append({"role": "assistant", "content": msg['message']})
                 elif msg['speaker_type'] == 'partner':
                     partner_name = self.partner_info.partner_name
@@ -131,7 +131,7 @@ class AgentManager:
             
             # 添加对话历史
             for msg in conversation_history[-10:]:  # 只保留最近10条消息
-                if msg['speaker_type'] == 'avatar':
+                if msg['speaker_type'] == 'user' or msg['speaker_type'] == 'avatar':
                     avatar_name = self.avatar_info.name
                     message_content = msg['message']
                     messages.append({"role": "user", "content": f"{avatar_name}: {message_content}"})
@@ -155,53 +155,6 @@ class AgentManager:
             logger.error(f"生成伙伴回复失败: {str(e)}")
             return f"抱歉，我现在有点忙，稍后再回复你。"
     
-    def generate_auto_conversation(self, conversation_history):
-        """生成自动对话（分身和伙伴自动聊天）"""
-        try:
-            # 确保用户数据已加载
-            self.load_user_data()
-            
-            # 如果对话历史为空，生成初始对话
-            if not conversation_history:
-                # 基于用户设定的目的地生成初始对话
-                if self.travel_settings and self.travel_settings.destination:
-                    destination = self.travel_settings.destination
-                    avatar_message = f"我们这次去{destination}旅行，我已经迫不及待了！你有什么特别想去的地方吗？"
-                else:
-                    avatar_message = "我们这次去哪里旅行呢？你有什么想法吗？"
-                
-                # 伙伴回复
-                partner_response = self.generate_partner_response(avatar_message, [])
-                # 分身继续回复
-                avatar_response = self.generate_avatar_response(partner_response, [
-                    {'speaker_type': 'avatar', 'message': avatar_message},
-                    {'speaker_type': 'partner', 'message': partner_response}
-                ])
-                
-                return {
-                    'avatar_message': avatar_message,
-                    'partner_response': partner_response,
-                    'avatar_response': avatar_response
-                }
-            else:
-                # 基于最后一条消息生成回复
-                last_message = conversation_history[-1]
-                if last_message['speaker_type'] == 'partner':
-                    # 最后是伙伴说话，分身回复
-                    avatar_response = self.generate_avatar_response(last_message['message'], conversation_history)
-                    return {
-                        'avatar_response': avatar_response
-                    }
-                elif last_message['speaker_type'] == 'avatar':
-                    # 最后是分身说话，伙伴回复
-                    partner_response = self.generate_partner_response(last_message['message'], conversation_history)
-                    return {
-                        'partner_response': partner_response
-                    }
-            
-        except Exception as e:
-            logger.error(f"生成自动对话失败: {str(e)}")
-            raise e
     
     def generate_responses_by_user_input(self, user_message, conversation_history):
         """生成回复（用户替分身说话）"""
@@ -209,14 +162,14 @@ class AgentManager:
             # 确保用户数据已加载
             self.load_user_data()
             
-            # 用户消息等同于分身说话
-            avatar_message = user_message
+            # 用户消息（替分身说话）
+            user_message_content = user_message
             
             # 生成伙伴回复
-            partner_response = self.generate_partner_response(avatar_message, conversation_history)
+            partner_response = self.generate_partner_response(user_message_content, conversation_history)
             
             return {
-                'avatar_message': avatar_message,
+                'user_message': user_message_content,
                 'partner_response': partner_response
             }
             
@@ -377,8 +330,8 @@ class AgentManager:
             messages = [{"role": "system", "content": plan_prompt}]
             
             # 添加对话历史
-            for msg in conversation_history[-5:]:  # 只保留最近5条消息
-                if msg['speaker_type'] == 'avatar':
+            for msg in conversation_history[-20:]:  # 只保留最近20条消息
+                if msg['speaker_type'] == 'user' or msg['speaker_type'] == 'avatar':
                     messages.append({"role": "assistant", "content": msg['message']})
                 elif msg['speaker_type'] == 'partner':
                     partner_name = self.partner_info.partner_name
@@ -417,7 +370,7 @@ class AgentManager:
             
             # 添加对话历史
             for msg in conversation_history[-5:]:  # 只保留最近5条消息
-                if msg['speaker_type'] == 'avatar':
+                if msg['speaker_type'] == 'user' or msg['speaker_type'] == 'avatar':
                     avatar_name = self.avatar_info.name
                     message_content = msg["message"]
                     messages.append({"role": "user", "content": f"{avatar_name}: {message_content}"})
@@ -445,3 +398,32 @@ class AgentManager:
             'message': message,
             'message_index': message_index + 1
         }
+    
+    def generate_auto_conversation_stream(self, conversation_history):
+        """生成自动对话流（仅返回业务数据）"""
+        try:
+            # 确保用户数据已加载
+            self.load_user_data()
+            
+            # 生成自动对话
+            responses = self.generate_auto_conversation(conversation_history)
+            
+            # 按顺序返回消息
+            message_order = []
+            if 'avatar_message' in responses:
+                message_order.append(('avatar', responses['avatar_message']))
+            if 'partner_response' in responses:
+                message_order.append(('partner', responses['partner_response']))
+            if 'avatar_response' in responses:
+                message_order.append(('avatar', responses['avatar_response']))
+            
+            # 逐条返回消息
+            for speaker_type, message_content in message_order:
+                yield {
+                    'speaker_type': speaker_type,
+                    'message': message_content
+                }
+            
+        except Exception as e:
+            logger.error(f"生成自动对话流失败: {str(e)}")
+            raise e
