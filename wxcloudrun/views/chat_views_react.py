@@ -161,24 +161,26 @@ def start_react_auto_conversation():
             }
         ]
         
+        # 注释掉数据库写入，纯测试前端推送
+        logger.info(f"[REACT_API] 跳过数据库写入，直接返回测试消息")
         # 保存测试消息到数据库
-        logger.info(f"[REACT_API] 开始保存测试消息到数据库")
-        saved_count = 0
-        for msg_data in test_messages:
-            try:
-                msg = ChatMessages(
-                    user_id=user_id,
-                    session_id=session_id,
-                    speaker_type=msg_data['speaker_type'],
-                    message=msg_data['message']
-                )
-                insert_chat_message(msg)
-                saved_count += 1
-                logger.info(f"[REACT_API] 保存测试消息成功: {msg_data['speaker_type']}")
-            except Exception as e:
-                logger.error(f"[REACT_API] 保存测试消息失败: {str(e)}")
-        
-        logger.info(f"[REACT_API] 测试消息保存完成，保存数量: {saved_count}")
+        # logger.info(f"[REACT_API] 开始保存测试消息到数据库")
+        # saved_count = 0
+        # for msg_data in test_messages:
+        #     try:
+        #         msg = ChatMessages(
+        #             user_id=user_id,
+        #             session_id=session_id,
+        #             speaker_type=msg_data['speaker_type'],
+        #             message=msg_data['message']
+        #         )
+        #         insert_chat_message(msg)
+        #         saved_count += 1
+        #         logger.info(f"[REACT_API] 保存测试消息成功: {msg_data['speaker_type']}")
+        #     except Exception as e:
+        #         logger.error(f"[REACT_API] 保存测试消息失败: {str(e)}")
+        # 
+        # logger.info(f"[REACT_API] 测试消息保存完成，保存数量: {saved_count}")
         
         # 构造响应数据
         response_data = {
