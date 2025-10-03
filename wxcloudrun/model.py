@@ -73,5 +73,10 @@ class ChatMessages(db.Model):
     speaker_type = db.Column(db.Enum('user', 'avatar', 'partner'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    
+    # 添加复合索引，允许多条消息但防止完全重复
+    __table_args__ = (
+        db.Index('idx_user_session_speaker_message', 'user_id', 'session_id', 'speaker_type', 'message'),
+    )
 
 

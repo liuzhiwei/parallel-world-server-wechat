@@ -174,7 +174,7 @@ def insert_chat_message(message):
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # 检查是否已存在相同的消息（防止重复插入）
+            # 检查是否已存在完全相同的消息（防止重复插入）
             existing = ChatMessages.query.filter(
                 ChatMessages.user_id == message.user_id,
                 ChatMessages.session_id == message.session_id,
@@ -206,6 +206,20 @@ def insert_chat_message(message):
                 raise e
                 
         except Exception as e:
+            # 处理完整性错误（重复键）
+            if "Duplicate entry" in str(e) and "idx_user_session" in str(e):
+                logger.warning(f"检测到重复键错误，可能是数据库索引问题: {str(e)}")
+                # 尝试删除有问题的索引
+                try:
+                    db.session.execute("DROP INDEX IF EXISTS idx_user_session ON ChatMessages")
+                    db.session.commit()
+                    logger.info("已删除有问题的 idx_user_session 索引")
+                    # 重试插入
+                    if attempt < max_retries - 1:
+                        continue
+                except Exception as drop_error:
+                    logger.error(f"删除索引失败: {str(drop_error)}")
+            
             logger.error(f"插入消息失败: {str(e)}")
             db.session.rollback()
             raise e
