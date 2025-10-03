@@ -400,7 +400,7 @@ def send_chat_message():
         
         # 创建智能体管理器并生成回复
         agent_manager = AgentManager(user_id)
-        responses = agent_manager.generate_responses(message, history_data)
+        responses = agent_manager.generate_responses_by_user_input(message, history_data)
         
         # 记录伙伴回复
         partner_msg = ChatMessages(
@@ -552,7 +552,7 @@ def test_chat_agents():
         agent_manager = AgentManager(user_id)
         
         # 生成伙伴回复（不保存到数据库，仅测试）
-        responses = agent_manager.generate_responses(message, [])
+        responses = agent_manager.generate_responses_by_user_input(message, [])
         
         return make_succ_response({
             'message': '智能体对话测试成功',
@@ -575,28 +575,20 @@ def test_chat_simple():
     :return: 测试结果
     """
     try:
-        # 使用测试用户ID
-        test_user_id = "test_user_123"
+        # 从请求参数获取用户ID
+        test_user_id = request.args.get('user_id')
+        if not test_user_id:
+            return make_err_response('缺少必需参数: user_id')
         
         # 创建智能体管理器
         agent_manager = AgentManager(test_user_id)
         
-        # 模拟用户数据（用于测试）
-        agent_manager.avatar_info = type('obj', (object,), {
-            'name': '小明',
-            'description': '活泼开朗，喜欢冒险和探索新地方'
-        })()
-        
-        agent_manager.partner_info = type('obj', (object,), {
-            'partner_name': '小红',
-            'partner_description': '温柔细心，喜欢文化古迹和美食'
-        })()
         
         # 测试消息
         test_message = "我们这次去哪里旅行呢？"
         
         # 生成伙伴回复
-        responses = agent_manager.generate_responses(test_message, [])
+        responses = agent_manager.generate_responses_by_user_input(test_message, [])
         
         return make_succ_response({
             'message': '简单智能体对话测试成功',

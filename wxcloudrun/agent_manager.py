@@ -16,9 +16,14 @@ class AgentManager:
         self.partner_info = None
         self.travel_settings = None
         self.ai_service = DeepSeekV3Service()
+        self._data_loaded = False
         
-    def load_user_data(self):
+    def load_user_data(self, force_reload=False):
         """加载用户数据"""
+        # 如果数据已加载且不强制重新加载，则跳过
+        if self._data_loaded and not force_reload:
+            return
+            
         try:
             # 加载分身信息
             self.avatar_info = get_digital_avatar_by_user_id(self.user_id)
@@ -29,10 +34,16 @@ class AgentManager:
             
             if not self.avatar_info or not self.partner_info:
                 raise Exception("用户数据不完整，请先完成个人信息设置")
+            
+            self._data_loaded = True
                 
         except Exception as e:
             logger.error(f"加载用户数据失败: {str(e)}")
             raise e
+    
+    def refresh_user_data(self):
+        """强制刷新用户数据（当用户修改信息后调用）"""
+        self.load_user_data(force_reload=True)
     
     def create_avatar_prompt(self):
         """创建分身提示词"""
@@ -143,7 +154,7 @@ class AgentManager:
     def generate_auto_conversation(self, conversation_history):
         """生成自动对话（分身和伙伴自动聊天）"""
         try:
-            # 加载用户数据
+            # 确保用户数据已加载
             self.load_user_data()
             
             # 如果对话历史为空，生成初始对话
@@ -183,10 +194,10 @@ class AgentManager:
             logger.error(f"生成自动对话失败: {str(e)}")
             raise e
     
-    def generate_responses(self, user_message, conversation_history):
+    def generate_responses_by_user_input(self, user_message, conversation_history):
         """生成回复（用户替分身说话）"""
         try:
-            # 加载用户数据
+            # 确保用户数据已加载
             self.load_user_data()
             
             # 用户消息等同于分身说话
@@ -195,16 +206,9 @@ class AgentManager:
             # 生成伙伴回复
             partner_response = self.generate_partner_response(avatar_message, conversation_history)
             
-            # 生成分身继续回复
-            avatar_response = self.generate_avatar_response(partner_response, conversation_history + [
-                {'speaker_type': 'avatar', 'message': avatar_message},
-                {'speaker_type': 'partner', 'message': partner_response}
-            ])
-            
             return {
                 'avatar_message': avatar_message,
-                'partner_response': partner_response,
-                'avatar_response': avatar_response
+                'partner_response': partner_response
             }
             
         except Exception as e:
