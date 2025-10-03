@@ -41,9 +41,6 @@ class AgentManager:
             logger.error(f"加载用户数据失败: {str(e)}")
             raise e
     
-    def refresh_user_data(self):
-        """强制刷新用户数据（当用户修改信息后调用）"""
-        self.load_user_data(force_reload=True)
     
     def create_avatar_prompt(self):
         """创建分身提示词"""
@@ -85,40 +82,6 @@ class AgentManager:
         
         return prompt
     
-    def generate_avatar_response(self, partner_message, conversation_history):
-        """生成分身回复（基于伙伴消息）"""
-        try:
-            # 创建系统提示词
-            system_prompt = self.create_avatar_prompt()
-            
-            # 构建消息列表
-            messages = [{"role": "system", "content": system_prompt}]
-            
-            # 添加对话历史
-            for msg in conversation_history[-10:]:  # 只保留最近10条消息
-                if msg['speaker_type'] == 'user' or msg['speaker_type'] == 'avatar':
-                    messages.append({"role": "assistant", "content": msg['message']})
-                elif msg['speaker_type'] == 'partner':
-                    partner_name = self.partner_info.partner_name
-                    message_content = msg['message']
-                    messages.append({"role": "user", "content": f"{partner_name}: {message_content}"})
-            
-            # 添加当前伙伴消息
-            messages.append({"role": "user", "content": f"{self.partner_info.partner_name}: {partner_message}"})
-            
-            # 调用AI服务
-            api_response = self.ai_service.chat_completion(
-                messages=messages,
-                temperature=0.8,
-                max_tokens=500
-            )
-            
-            response_text = self.ai_service.get_response_text(api_response)
-            return response_text
-            
-        except Exception as e:
-            logger.error(f"生成分身回复失败: {str(e)}")
-            return f"抱歉，我现在有点忙，稍后再回复你。"
     
     def generate_partner_response(self, avatar_message, conversation_history):
         """生成伙伴回复（基于分身消息）"""
