@@ -55,6 +55,10 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 # 初始化DB操作对象
 db = SQLAlchemy(app)
 
+# 初始化WebSocket
+from flask_socketio import SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+
 # 加载控制器
 from wxcloudrun import views
 from wxcloudrun import websocket_handlers

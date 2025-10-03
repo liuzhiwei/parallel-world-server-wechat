@@ -5,7 +5,9 @@ React模式对话系统的API接口
 import logging
 from datetime import datetime
 from flask import request, Response, Blueprint
+from flask_socketio import emit, join_room, leave_room
 from run import app
+from wxcloudrun import socketio
 from wxcloudrun.dao import insert_chat_message, get_chat_messages_by_session
 from wxcloudrun.model import ChatMessages
 from wxcloudrun.agents.agent_manager import AgentManager
@@ -16,6 +18,79 @@ logger = logging.getLogger('log')
 
 # 创建蓝图
 react_chat_bp = Blueprint('react_chat', __name__, url_prefix='/api/react_chat')
+
+
+# WebSocket 事件处理
+@socketio.on('connect')
+def handle_connect():
+    """WebSocket连接建立"""
+    logger.info(f"[WEBSOCKET] 客户端连接成功: {request.sid}")
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """WebSocket连接断开"""
+    logger.info(f"[WEBSOCKET] 客户端断开连接: {request.sid}")
+
+
+@socketio.on('join_chat_room')
+def handle_join_chat_room(data):
+    """加入聊天房间"""
+    try:
+        user_id = data.get('user_id')
+        session_id = data.get('session_id')
+        
+        if not user_id or not session_id:
+            logger.error(f"[WEBSOCKET] 加入房间失败，缺少参数: {data}")
+            return
+        
+        room_name = f"chat_{user_id}_{session_id}"
+        join_room(room_name)
+        
+        logger.info(f"[WEBSOCKET] 客户端 {request.sid} 加入房间: {room_name}")
+        
+        # 发送确认消息
+        emit('room_joined', {
+            'room': room_name,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        logger.error(f"[WEBSOCKET] 加入房间失败: {str(e)}")
+        emit('room_error', {
+            'error': str(e),
+            'status': 'error'
+        })
+
+
+@socketio.on('leave_chat_room')
+def handle_leave_chat_room(data):
+    """离开聊天房间"""
+    try:
+        user_id = data.get('user_id')
+        session_id = data.get('session_id')
+        
+        if not user_id or not session_id:
+            logger.error(f"[WEBSOCKET] 离开房间失败，缺少参数: {data}")
+            return
+        
+        room_name = f"chat_{user_id}_{session_id}"
+        leave_room(room_name)
+        
+        logger.info(f"[WEBSOCKET] 客户端 {request.sid} 离开房间: {room_name}")
+        
+        # 发送确认消息
+        emit('room_left', {
+            'room': room_name,
+            'status': 'success'
+        })
+        
+    except Exception as e:
+        logger.error(f"[WEBSOCKET] 离开房间失败: {str(e)}")
+        emit('room_error', {
+            'error': str(e),
+            'status': 'error'
+        })
 
 
 @react_chat_bp.route('/health', methods=['GET'])
@@ -111,8 +186,8 @@ def simple_test():
 @react_chat_bp.route('/auto', methods=['POST'])
 def start_react_auto_conversation():
     """
-    开始React模式自动对话
-    :return: React模式自动对话结果
+    开始React模式自动对话 - 使用WebSocket推送消息
+    :return: 立即返回成功状态，通过WebSocket推送消息
     """
     try:
         logger.info(f"[REACT_API] ========== 收到React自动对话请求 ==========")
@@ -160,7 +235,7 @@ def start_react_auto_conversation():
         
         logger.info(f"[REACT_API] 对话历史数量: {len(history_data)}")
         
-        # 创建智能体管理器并生成React对话
+        # 创建智能体管理器
         logger.info(f"[REACT_API] 开始创建智能体管理器")
         agent_manager = AgentManager(user_id)
         
@@ -168,78 +243,92 @@ def start_react_auto_conversation():
         max_rounds = params.get('max_rounds', 6)
         logger.info(f"[REACT_API] 对话参数: min_rounds={min_rounds}, max_rounds={max_rounds}")
         
-        logger.info(f"[REACT_API] 开始测试推送固定消息")
+        # 立即返回成功响应，表示请求已接收
+        logger.info(f"[REACT_API] 立即返回成功响应，开始异步推送消息")
         
-        # 测试用固定消息，验证前端推送功能
-        test_messages = [
-            {
-                'speaker_type': 'avatar',
-                'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
-                'created_at': datetime.now().isoformat(),
-                'metadata': {'test': True, 'round': 1}
-            },
-            {
-                'speaker_type': 'partner',
-                'message': '嗨！我是你的旅行伙伴，让我们一起探索这个美好的目的地吧！',
-                'created_at': datetime.now().isoformat(),
-                'metadata': {'test': True, 'round': 2}
-            },
-            {
-                'speaker_type': 'avatar',
-                'message': '太好了！我已经为你准备了详细的旅行计划，包括景点推荐、美食攻略和住宿建议。',
-                'created_at': datetime.now().isoformat(),
-                'metadata': {'test': True, 'round': 3}
-            }
-        ]
-        
-        # 注释掉数据库写入，纯测试前端推送
-        logger.info(f"[REACT_API] 跳过数据库写入，直接返回测试消息")
-        # 保存测试消息到数据库
-        # logger.info(f"[REACT_API] 开始保存测试消息到数据库")
-        # saved_count = 0
-        # for msg_data in test_messages:
-        #     try:
-        #         msg = ChatMessages(
-        #             user_id=user_id,
-        #             session_id=session_id,
-        #             speaker_type=msg_data['speaker_type'],
-        #             message=msg_data['message']
-        #         )
-        #         insert_chat_message(msg)
-        #         saved_count += 1
-        #         logger.info(f"[REACT_API] 保存测试消息成功: {msg_data['speaker_type']}")
-        #     except Exception as e:
-        #         logger.error(f"[REACT_API] 保存测试消息失败: {str(e)}")
-        # 
-        # logger.info(f"[REACT_API] 测试消息保存完成，保存数量: {saved_count}")
-        
-        # 构造响应数据
-        response_data = {
-            'message': 'React模式测试消息推送成功',
-            'data': {
-                'messages': test_messages,
-                'total_messages': len(test_messages),
-                'conversation_summary': {
-                    'total_rounds': 3,
+        # 异步推送消息
+        def push_messages_async():
+            try:
+                logger.info(f"[WEBSOCKET] 开始异步推送消息")
+                
+                # 测试用固定消息
+                test_messages = [
+                    {
+                        'speaker_type': 'avatar',
+                        'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
+                        'created_at': datetime.now().isoformat(),
+                        'metadata': {'test': True, 'round': 1}
+                    },
+                    {
+                        'speaker_type': 'partner',
+                        'message': '嗨！我是你的旅行伙伴，让我们一起探索这个美好的目的地吧！',
+                        'created_at': datetime.now().isoformat(),
+                        'metadata': {'test': True, 'round': 2}
+                    },
+                    {
+                        'speaker_type': 'avatar',
+                        'message': '太好了！我已经为你准备了详细的旅行计划，包括景点推荐、美食攻略和住宿建议。',
+                        'created_at': datetime.now().isoformat(),
+                        'metadata': {'test': True, 'round': 3}
+                    }
+                ]
+                
+                # 通过WebSocket推送消息
+                room_name = f"chat_{user_id}_{session_id}"
+                logger.info(f"[WEBSOCKET] 推送消息到房间: {room_name}")
+                
+                for i, msg in enumerate(test_messages):
+                    import time
+                    time.sleep(1)  # 模拟消息间隔
+                    
+                    # 推送单条消息
+                    socketio.emit('chat_message', {
+                        'message': msg,
+                        'total_messages': len(test_messages),
+                        'current_index': i + 1,
+                        'status': 'message'
+                    }, room=room_name)
+                    
+                    logger.info(f"[WEBSOCKET] 推送消息 {i+1}/{len(test_messages)}: {msg['speaker_type']}")
+                
+                # 推送完成消息
+                socketio.emit('chat_complete', {
                     'total_messages': len(test_messages),
-                    'conversation_phase': 'test',
-                    'current_topic': '测试对话',
-                    'mode': 'test'
-                },
-                'mode': 'react'
+                    'conversation_summary': {
+                        'total_rounds': 3,
+                        'total_messages': len(test_messages),
+                        'conversation_phase': 'test',
+                        'current_topic': '测试对话',
+                        'mode': 'test'
+                    },
+                    'status': 'complete'
+                }, room=room_name)
+                
+                logger.info(f"[WEBSOCKET] 消息推送完成")
+                
+            except Exception as e:
+                logger.error(f"[WEBSOCKET] 异步推送消息失败: {str(e)}")
+                # 推送错误消息
+                socketio.emit('chat_error', {
+                    'error': str(e),
+                    'status': 'error'
+                }, room=room_name)
+        
+        # 启动异步任务
+        socketio.start_background_task(push_messages_async)
+        
+        # 返回立即响应
+        response_data = {
+            'message': 'React模式自动对话已开始，请通过WebSocket接收消息',
+            'data': {
+                'status': 'started',
+                'room': f"chat_{user_id}_{session_id}",
+                'mode': 'websocket'
             }
         }
         
-        logger.info(f"[REACT_API] 准备返回测试响应，消息数量: {len(test_messages)}")
-        logger.info(f"[REACT_API] 响应数据: {response_data}")
-        
-        # 构造响应
-        response = make_succ_response(response_data)
-        logger.info(f"[REACT_API] 响应构造完成，类型: {type(response)}")
-        logger.info(f"[REACT_API] 响应状态: {response.status_code if hasattr(response, 'status_code') else 'N/A'}")
-        
-        logger.info(f"[REACT_API] 函数执行完成，准备返回响应")
-        return response
+        logger.info(f"[REACT_API] 返回立即响应: {response_data}")
+        return make_succ_response(response_data)
         
         # 注释掉原来的AI生成逻辑，用于测试
         """

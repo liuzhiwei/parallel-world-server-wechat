@@ -1,7 +1,7 @@
 # 创建应用实例
 import sys
 import logging
-from wxcloudrun import app
+from wxcloudrun import app, socketio
 
 # 确保所有视图模块被导入
 import wxcloudrun.views
@@ -20,4 +20,4 @@ if __name__ == '__main__':
         for rule in app.url_map.iter_rules():
             logger.info(f"  {rule.methods} {rule.rule}")
     
-    app.run(host=sys.argv[1], port=sys.argv[2], debug=True)
+    socketio.run(app, host=sys.argv[1], port=sys.argv[2], debug=True)
