@@ -32,6 +32,14 @@ db = SQLAlchemy(app)
 from wxcloudrun import views
 from wxcloudrun import websocket_handlers
 
+# 确保React蓝图被注册
+try:
+    from wxcloudrun.views.chat_views_react import react_chat_bp
+    app.register_blueprint(react_chat_bp)
+    print("React蓝图注册成功")
+except Exception as e:
+    print(f"React蓝图注册失败: {e}")
+
 # 加载配置
 app.config.from_object('config')
 

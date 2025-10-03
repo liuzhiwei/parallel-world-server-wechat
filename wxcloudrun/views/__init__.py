@@ -5,6 +5,7 @@ try:
     from . import db_views
     from . import user_views  
     from . import chat_views
+    from . import chat_views_react
     print("所有视图模块导入成功")
 except Exception as e:
     print(f"视图模块导入失败: {e}")

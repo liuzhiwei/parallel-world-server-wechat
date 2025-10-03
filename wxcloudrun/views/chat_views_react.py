@@ -232,5 +232,4 @@ def reset_react_conversation():
         return make_err_response(f'重置React对话失败: {str(e)}')
 
 
-# 注册蓝图
-app.register_blueprint(react_chat_bp)
+# 蓝图注册在 wxcloudrun/__init__.py 中完成
