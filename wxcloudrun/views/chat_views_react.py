@@ -3,6 +3,7 @@ React模式对话系统的API接口
 """
 
 import logging
+import json
 from datetime import datetime
 from flask import request, Response, Blueprint
 from run import app
@@ -168,7 +169,7 @@ def start_react_auto_conversation():
         max_rounds = params.get('max_rounds', 6)
         logger.info(f"[REACT_API] 对话参数: min_rounds={min_rounds}, max_rounds={max_rounds}")
         
-        logger.info(f"[REACT_API] 开始生成测试消息")
+        logger.info(f"[REACT_API] 开始生成对话消息")
         
         # 测试用固定消息
         test_messages = [
@@ -180,9 +181,11 @@ def start_react_auto_conversation():
             }
         ]
         
+        logger.info(f"[REACT_API] 生成消息完成，消息数量: {len(test_messages)}")
+        
         # 构造响应数据
         response_data = {
-            'message': 'React模式测试消息推送成功',
+            'message': 'React模式对话生成成功',
             'data': {
                 'messages': test_messages,
                 'total_messages': len(test_messages),
@@ -197,14 +200,9 @@ def start_react_auto_conversation():
             }
         }
         
-        logger.info(f"[REACT_API] 准备返回测试响应，消息数量: {len(test_messages)}")
-        logger.info(f"[REACT_API] 响应数据: {response_data}")
-        
-        # 构造响应
+        logger.info(f"[REACT_API] 准备返回响应，消息数量: {len(test_messages)}")
         response = make_succ_response(response_data)
-        logger.info(f"[REACT_API] 响应构造完成，类型: {type(response)}")
-        
-        logger.info(f"[REACT_API] 函数执行完成，准备返回响应")
+        logger.info(f"[REACT_API] 响应构造完成")
         return response
         
         # 注释掉原来的AI生成逻辑，用于测试
