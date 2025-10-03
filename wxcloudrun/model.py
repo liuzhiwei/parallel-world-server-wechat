@@ -15,18 +15,6 @@ class Users(db.Model):
     updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
 
 
-# 计数表
-class Counters(db.Model):
-    # 设置结构体表格名称
-    __tablename__ = 'Counters'
-
-    # 设定结构体对应表格的字段
-    id = db.Column(db.Integer, primary_key=True)
-    count = db.Column(db.Integer, default=1)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-
-
 # 数字分身表
 class DigitalAvatar(db.Model):
     # 设置结构体表格名称

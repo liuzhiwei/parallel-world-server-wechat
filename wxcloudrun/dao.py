@@ -3,8 +3,7 @@ import logging
 from sqlalchemy.exc import OperationalError
 
 from wxcloudrun import db
-from wxcloudrun.model import Users, Counters, DigitalAvatar, TravelPartner, TravelSettings
-# from wxcloudrun.model import Counters, AIConversation
+from wxcloudrun.model import Users, DigitalAvatar, TravelPartner, TravelSettings
 
 # 初始化日志
 logger = logging.getLogger('log')
@@ -66,53 +65,6 @@ def ensure_user_exists(user_id):
     
     print(f"=== ensure_user_exists 结束 ===")
     return user
-
-
-def query_counterbyid(id):
-    """
-    根据ID查询计数实体
-    :param id: 计数ID
-    :return: 计数实体
-    """
-    return Counters.query.filter(Counters.id == id).first()
-
-
-def delete_counterbyid(id):
-    """
-    根据ID删除计数实体
-    :param id: 计数ID
-    """
-    counter = Counters.query.filter(Counters.id == id).first()
-    if counter is None:
-        return
-    db.session.delete(counter)
-    db.session.commit()
-
-
-def insert_counter(counter):
-    """
-    插入计数实体
-    :param counter: Counters实体
-    """
-    db.session.add(counter)
-    db.session.commit()
-
-
-def update_counterbyid(counter):
-    """
-    根据ID更新计数实体
-    :param counter: Counters实体
-    """
-    db.session.commit()
-
-
-# def insert_ai_conversation(conversation):
-#     """
-#     插入AI对话记录
-#     :param conversation: AIConversation实体
-#     """
-#     db.session.add(conversation)
-#     db.session.commit()
 
 
 # 数字分身相关DAO函数
