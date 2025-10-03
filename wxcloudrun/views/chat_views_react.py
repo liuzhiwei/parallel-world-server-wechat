@@ -77,6 +77,37 @@ def test_react_api():
         return make_err_response(f'测试失败: {str(e)}')
 
 
+@react_chat_bp.route('/simple', methods=['POST'])
+def simple_test():
+    """简单测试接口"""
+    try:
+        logger.info(f"[SIMPLE_API] 收到简单测试请求")
+        
+        response_data = {
+            'message': '简单测试成功',
+            'data': {
+                'messages': [
+                    {
+                        'speaker_type': 'avatar',
+                        'message': '这是一个简单的测试消息',
+                        'created_at': datetime.now().isoformat()
+                    }
+                ],
+                'total_messages': 1,
+                'mode': 'simple'
+            }
+        }
+        
+        logger.info(f"[SIMPLE_API] 准备返回简单响应")
+        response = make_succ_response(response_data)
+        logger.info(f"[SIMPLE_API] 响应构造完成")
+        return response
+        
+    except Exception as e:
+        logger.error(f'[SIMPLE_API] 简单测试失败: {str(e)}')
+        return make_err_response(f'简单测试失败: {str(e)}')
+
+
 @react_chat_bp.route('/auto', methods=['POST'])
 def start_react_auto_conversation():
     """
@@ -200,7 +231,15 @@ def start_react_auto_conversation():
         }
         
         logger.info(f"[REACT_API] 准备返回测试响应，消息数量: {len(test_messages)}")
-        return make_succ_response(response_data)
+        logger.info(f"[REACT_API] 响应数据: {response_data}")
+        
+        # 构造响应
+        response = make_succ_response(response_data)
+        logger.info(f"[REACT_API] 响应构造完成，类型: {type(response)}")
+        logger.info(f"[REACT_API] 响应状态: {response.status_code if hasattr(response, 'status_code') else 'N/A'}")
+        
+        logger.info(f"[REACT_API] 函数执行完成，准备返回响应")
+        return response
         
         # 注释掉原来的AI生成逻辑，用于测试
         """
