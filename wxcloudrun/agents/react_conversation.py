@@ -181,6 +181,9 @@ PARAMS: {{"topic": "目的地选择", "tone": "兴奋期待"}}"""
 
             messages = [{"role": "user", "content": thinking_prompt}]
             
+            logger.info(f"[THINKING_MODEL] 开始思考，用户ID: {context.user_id}")
+            logger.info(f"[THINKING_MODEL] 思考提示词长度: {len(thinking_prompt)}字符")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.7,
@@ -188,6 +191,7 @@ PARAMS: {{"topic": "目的地选择", "tone": "兴奋期待"}}"""
             )
             
             response_text = self.ai_service.get_response_text(api_response)
+            logger.info(f"[THINKING_MODEL] 思考完成，响应长度: {len(response_text)}字符")
             
             # 解析响应
             action_type, reason, params = self._parse_thinking_response(response_text)
@@ -271,6 +275,11 @@ CONFIDENCE: 0.8"""
 
             messages = [{"role": "user", "content": reflection_prompt}]
             
+            logger.info(f"[REFLECTION_MODEL] 开始反思，用户ID: {context.user_id}")
+            logger.info(f"[REFLECTION_MODEL] 反思提示词长度: {len(reflection_prompt)}字符")
+            logger.info(f"[REFLECTION_MODEL] 行动类型: {action.type.value}")
+            logger.info(f"[REFLECTION_MODEL] 行动结果: {result.success}")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.6,
@@ -278,6 +287,7 @@ CONFIDENCE: 0.8"""
             )
             
             response_text = self.ai_service.get_response_text(api_response)
+            logger.info(f"[REFLECTION_MODEL] 反思完成，响应长度: {len(response_text)}字符")
             
             # 解析响应
             evaluation, adjustment, next_hint, confidence = self._parse_reflection_response(response_text)

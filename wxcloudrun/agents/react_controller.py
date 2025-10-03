@@ -59,7 +59,7 @@ class ReactConversationController:
         if max_rounds:
             self.max_rounds = max_rounds
         
-        logger.info(f"开始React对话循环: {self.user_id}, 最大轮次: {self.max_rounds}")
+        logger.info(f"[REACT_CONTROLLER] 开始React对话循环: {self.user_id}, 最大轮次: {self.max_rounds}")
         
         try:
             # 初始行动：生成对话计划
@@ -69,9 +69,11 @@ class ReactConversationController:
                 reason="初始化对话计划"
             )
             
+            logger.info(f"[REACT_CONTROLLER] 执行初始行动: {initial_action.type.value}")
             # 执行初始行动
             result = self.tool_registry.execute(initial_action.type.value, initial_action.params, self.context)
             self.context.add_action_result(initial_action, result)
+            logger.info(f"[REACT_CONTROLLER] 初始行动完成: {result.success}")
             
             if result.success:
                 self.context.update_plan(result.data)
@@ -79,34 +81,30 @@ class ReactConversationController:
             
             # 主对话循环
             for round_num in range(1, self.max_rounds + 1):
-                if self.debug_mode:
-                    logger.info(f"对话轮次 {round_num}/{self.max_rounds}")
+                logger.info(f"[REACT_CONTROLLER] 对话轮次 {round_num}/{self.max_rounds}")
                 
                 # 检查是否应该结束
                 if self.context.should_end_conversation():
-                    logger.info("对话达到结束条件")
+                    logger.info("[REACT_CONTROLLER] 对话达到结束条件")
                     break
                 
                 # 思考阶段
+                logger.info(f"[REACT_CONTROLLER] 开始思考阶段")
                 action = self.thinking_model.think(self.context)
-                
-                if self.debug_mode:
-                    logger.info(f"思考结果: {action.type.value} - {action.reason}")
+                logger.info(f"[REACT_CONTROLLER] 思考结果: {action.type.value} - {action.reason}")
                 
                 # 执行阶段
+                logger.info(f"[REACT_CONTROLLER] 开始执行阶段")
                 result = self.tool_registry.execute(action.type.value, action.params, self.context)
                 self.context.add_action_result(action, result)
-                
-                if self.debug_mode:
-                    logger.info(f"执行结果: {result.success} - {result.message}")
+                logger.info(f"[REACT_CONTROLLER] 执行结果: {result.success} - {result.message}")
                 
                 # 反思阶段
                 if self.enable_reflection:
+                    logger.info(f"[REACT_CONTROLLER] 开始反思阶段")
                     reflection = self.reflection_model.reflect(self.context, action, result)
                     self.context.add_reflection(reflection)
-                    
-                    if self.debug_mode:
-                        logger.info(f"反思结果: {reflection.action_evaluation}")
+                    logger.info(f"[REACT_CONTROLLER] 反思结果: {reflection.action_evaluation}")
                 
                 # 产出消息
                 if result.success and result.data:

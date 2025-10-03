@@ -28,6 +28,10 @@ class ConversationPlanner:
 
             messages = [{"role": "user", "content": plan_prompt}]
             
+            logger.info(f"[CONVERSATION_PLANNER] 开始生成对话计划")
+            logger.info(f"[CONVERSATION_PLANNER] 计划提示词长度: {len(plan_prompt)}字符")
+            logger.info(f"[CONVERSATION_PLANNER] 轮次范围: {min_rounds}-{max_rounds}")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.8,
@@ -35,6 +39,7 @@ class ConversationPlanner:
             )
             
             plan_text = self.ai_service.get_response_text(api_response)
+            logger.info(f"[CONVERSATION_PLANNER] 计划生成完成，响应长度: {len(plan_text)}字符")
             
             # 解析JSON计划
             # 提取JSON部分

@@ -1,6 +1,10 @@
 import requests
+import logging
 from datetime import datetime
 from typing import List, Dict, Optional
+
+# 初始化日志
+logger = logging.getLogger('log')
 
 
 class DeepSeekV3Service:
@@ -44,16 +48,42 @@ class DeepSeekV3Service:
         }
         
         try:
+            logger.info(f"[AI_SERVICE] 开始调用DeepSeek API")
+            logger.info(f"[AI_SERVICE] 请求参数: model={self.model}, temperature={temperature}, max_tokens={max_tokens}")
+            logger.info(f"[AI_SERVICE] 消息数量: {len(messages)}")
+            logger.info(f"[AI_SERVICE] 请求URL: {self.base_url}/chat/completions")
+            
+            start_time = datetime.now()
             response = requests.post(
                 f"{self.base_url}/chat/completions",
                 headers=headers,
                 json=payload,
                 timeout=300
             )
+            end_time = datetime.now()
+            duration = (end_time - start_time).total_seconds()
+            
+            logger.info(f"[AI_SERVICE] API调用完成，耗时: {duration:.2f}秒")
+            logger.info(f"[AI_SERVICE] 响应状态码: {response.status_code}")
+            
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            
+            logger.info(f"[AI_SERVICE] 响应内容长度: {len(str(result))}")
+            if 'choices' in result and len(result['choices']) > 0:
+                content_length = len(result['choices'][0].get('message', {}).get('content', ''))
+                logger.info(f"[AI_SERVICE] 生成内容长度: {content_length}字符")
+            
+            return result
+        except requests.exceptions.Timeout as e:
+            logger.error(f"[AI_SERVICE] API调用超时: {str(e)}")
+            raise Exception(f"DeepSeek API调用超时: {str(e)}")
         except requests.exceptions.RequestException as e:
+            logger.error(f"[AI_SERVICE] API调用失败: {str(e)}")
             raise Exception(f"DeepSeek API调用失败: {str(e)}")
+        except Exception as e:
+            logger.error(f"[AI_SERVICE] 未知错误: {str(e)}")
+            raise Exception(f"DeepSeek API调用异常: {str(e)}")
     
     def get_response_text(self, api_response: Dict) -> str:
         """
@@ -66,8 +96,14 @@ class DeepSeekV3Service:
             响应文本
         """
         try:
-            return api_response['choices'][0]['message']['content']
+            logger.info(f"[AI_SERVICE] 开始解析API响应")
+            content = api_response['choices'][0]['message']['content']
+            logger.info(f"[AI_SERVICE] 解析成功，内容长度: {len(content)}字符")
+            logger.info(f"[AI_SERVICE] 内容预览: {content[:100]}...")
+            return content
         except (KeyError, IndexError) as e:
+            logger.error(f"[AI_SERVICE] 解析API响应失败: {str(e)}")
+            logger.error(f"[AI_SERVICE] 响应结构: {api_response}")
             raise Exception(f"无法解析API响应: {str(e)}")
     
     def get_usage_info(self, api_response: Dict) -> Dict:

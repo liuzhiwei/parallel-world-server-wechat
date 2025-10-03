@@ -155,27 +155,39 @@ def start_auto_conversation():
     :return: 流式响应
     """
     try:
+        logger.info(f"[CHAT_API] 收到自动对话请求")
+        logger.info(f"[CHAT_API] 请求来源: {request.remote_addr}")
+        logger.info(f"[CHAT_API] 请求头: {dict(request.headers)}")
+        
         params = request.get_json()
+        logger.info(f"[CHAT_API] 请求参数: {params}")
         
         if not params:
+            logger.error("[CHAT_API] 请求体为空")
             return make_err_response('请求体不能为空')
         
         # 必需参数检查
         required_fields = ['user_id', 'session_id']
         for field in required_fields:
             if field not in params:
+                logger.error(f"[CHAT_API] 缺少必需参数: {field}")
                 return make_err_response(f'缺少必需参数: {field}')
         
         user_id = params['user_id']
         session_id = params['session_id']
         
+        logger.info(f"[CHAT_API] 用户ID: {user_id}, 会话ID: {session_id}")
+        
         # 验证参数
         if not user_id.strip():
+            logger.error("[CHAT_API] 用户ID为空")
             return make_err_response('用户ID不能为空')
         if not session_id.strip():
+            logger.error("[CHAT_API] 会话ID为空")
             return make_err_response('会话ID不能为空')
         
         # 获取对话历史
+        logger.info(f"[CHAT_API] 开始获取对话历史")
         conversation_history = get_chat_messages_by_session(user_id, session_id, limit=20)
         history_data = []
         for msg in conversation_history:
@@ -185,22 +197,36 @@ def start_auto_conversation():
                 'created_at': msg.created_at.isoformat()
             })
         
+        logger.info(f"[CHAT_API] 对话历史数量: {len(history_data)}")
+        
         # 创建智能体管理器并生成所有消息
+        logger.info(f"[CHAT_API] 开始创建智能体管理器")
         agent_manager = AgentManager(user_id)
+        
+        logger.info(f"[CHAT_API] 开始生成多轮对话")
         messages = []
+        message_count = 0
         for message_data in agent_manager.generate_multi_round_conversation_stream(history_data):
             # 过滤掉系统消息，只处理对话消息
             if message_data['speaker_type'] == 'system':
+                logger.info(f"[CHAT_API] 跳过系统消息")
                 continue
+            
+            message_count += 1
+            logger.info(f"[CHAT_API] 处理消息 #{message_count}: {message_data['speaker_type']}")
                 
             # 保存到数据库
-            msg = ChatMessages(
-                user_id=user_id,
-                session_id=session_id,
-                speaker_type=message_data['speaker_type'],
-                message=message_data['message']
-            )
-            insert_chat_message(msg)
+            try:
+                msg = ChatMessages(
+                    user_id=user_id,
+                    session_id=session_id,
+                    speaker_type=message_data['speaker_type'],
+                    message=message_data['message']
+                )
+                insert_chat_message(msg)
+                logger.info(f"[CHAT_API] 消息保存成功")
+            except Exception as e:
+                logger.error(f"[CHAT_API] 消息保存失败: {str(e)}")
             
             # 添加到消息列表
             messages.append({
@@ -209,16 +235,24 @@ def start_auto_conversation():
                 'created_at': datetime.now().isoformat()
             })
         
-        return make_succ_response({
+        logger.info(f"[CHAT_API] 对话生成完成，消息数量: {len(messages)}")
+        
+        response_data = {
             'message': '自动对话生成成功',
             'data': {
                 'messages': messages,
                 'total_messages': len(messages)
             }
-        })
+        }
+        
+        logger.info(f"[CHAT_API] 准备返回响应，消息数量: {len(messages)}")
+        return make_succ_response(response_data)
         
     except Exception as e:
-        logger.error(f'自动对话生成失败: {str(e)}')
+        logger.error(f'[CHAT_API] 自动对话生成失败: {str(e)}')
+        logger.error(f'[CHAT_API] 错误类型: {type(e).__name__}')
+        import traceback
+        logger.error(f'[CHAT_API] 错误堆栈: {traceback.format_exc()}')
         return make_err_response(f'自动对话生成失败: {str(e)}')
 
 

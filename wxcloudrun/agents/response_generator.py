@@ -40,6 +40,10 @@ class ResponseGenerator:
             messages.append({"role": "user", "content": f"{avatar_info.name}: {avatar_message}"})
             
             # 调用AI服务
+            logger.info(f"[RESPONSE_GENERATOR] 开始生成伙伴回复")
+            logger.info(f"[RESPONSE_GENERATOR] 消息数量: {len(messages)}")
+            logger.info(f"[RESPONSE_GENERATOR] 分身消息: {avatar_message[:50]}...")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.8,
@@ -47,6 +51,7 @@ class ResponseGenerator:
             )
             
             response_text = self.ai_service.get_response_text(api_response)
+            logger.info(f"[RESPONSE_GENERATOR] 伙伴回复生成完成，长度: {len(response_text)}字符")
             return response_text
             
         except Exception as e:
@@ -74,13 +79,19 @@ class ResponseGenerator:
                     messages.append({"role": "user", "content": f"{partner_name}: {message_content}"})
             
             # 调用AI服务
+            logger.info(f"[RESPONSE_GENERATOR] 开始生成分身消息（基于计划）")
+            logger.info(f"[RESPONSE_GENERATOR] 消息数量: {len(messages)}")
+            logger.info(f"[RESPONSE_GENERATOR] 计划目的: {message_info.get('purpose', 'N/A')}")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.8,
                 max_tokens=300
             )
             
-            return self.ai_service.get_response_text(api_response)
+            result = self.ai_service.get_response_text(api_response)
+            logger.info(f"[RESPONSE_GENERATOR] 分身消息生成完成，长度: {len(result)}字符")
+            return result
             
         except Exception as e:
             logger.error(f"根据计划生成分身消息失败: {str(e)}")
@@ -107,13 +118,19 @@ class ResponseGenerator:
                     messages.append({"role": "assistant", "content": msg['message']})
             
             # 调用AI服务
+            logger.info(f"[RESPONSE_GENERATOR] 开始生成伙伴消息（基于计划）")
+            logger.info(f"[RESPONSE_GENERATOR] 消息数量: {len(messages)}")
+            logger.info(f"[RESPONSE_GENERATOR] 计划目的: {message_info.get('purpose', 'N/A')}")
+            
             api_response = self.ai_service.chat_completion(
                 messages=messages,
                 temperature=0.8,
                 max_tokens=300
             )
             
-            return self.ai_service.get_response_text(api_response)
+            result = self.ai_service.get_response_text(api_response)
+            logger.info(f"[RESPONSE_GENERATOR] 伙伴消息生成完成，长度: {len(result)}字符")
+            return result
             
         except Exception as e:
             logger.error(f"根据计划生成伙伴消息失败: {str(e)}")
