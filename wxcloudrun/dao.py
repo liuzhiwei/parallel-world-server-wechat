@@ -149,8 +149,19 @@ def insert_travel_settings(settings):
     插入旅行设置实体
     :param settings: TravelSettings实体
     """
-    db.session.add(settings)
-    db.session.commit()
+    logger.info(f"=== insert_travel_settings 开始 ===")
+    logger.info(f"设置数据: user_id={settings.user_id}, destination={settings.destination}, days={settings.days}")
+    
+    try:
+        db.session.add(settings)
+        db.session.commit()
+        logger.info(f"旅行设置插入成功，ID: {settings.id}")
+    except Exception as e:
+        logger.error(f"旅行设置插入失败: {str(e)}")
+        db.session.rollback()
+        raise e
+    
+    logger.info(f"=== insert_travel_settings 结束 ===")
 
 
 def get_travel_settings_by_user_id(user_id):

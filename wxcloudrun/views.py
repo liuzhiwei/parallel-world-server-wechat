@@ -248,12 +248,12 @@ def save_all_data():
         # 确保用户存在
         ensure_user_exists(user_id)
         
-        print(f"=== 一次性保存所有数据 ===")
-        print(f"user_id: {user_id}")
-        print(f"avatar_data: {avatar_data}")
-        print(f"partner_data: {partner_data}")
-        print(f"settings_data: {settings_data}")
-        print(f"=========================")
+        logger.info(f"=== 一次性保存所有数据 ===")
+        logger.info(f"user_id: {user_id}")
+        logger.info(f"avatar_data: {avatar_data}")
+        logger.info(f"partner_data: {partner_data}")
+        logger.info(f"settings_data: {settings_data}")
+        logger.info(f"=========================")
         
         # 保存分身信息
         avatar = DigitalAvatar()
@@ -266,9 +266,9 @@ def save_all_data():
         
         try:
             insert_digital_avatar(avatar)
-            print("分身创建成功，ID:", avatar.id)
+            logger.info(f"分身创建成功，ID: {avatar.id}")
         except Exception as e:
-            print(f"分身创建失败: {str(e)}")
+            logger.error(f"分身创建失败: {str(e)}")
             return make_err_response(f'创建分身失败: {str(e)}')
         
         # 保存旅行伙伴信息
@@ -282,9 +282,9 @@ def save_all_data():
         
         try:
             insert_travel_partner(partner)
-            print("旅行伙伴创建成功，ID:", partner.id)
+            logger.info(f"旅行伙伴创建成功，ID: {partner.id}")
         except Exception as e:
-            print(f"旅行伙伴创建失败: {str(e)}")
+            logger.error(f"旅行伙伴创建失败: {str(e)}")
             return make_err_response(f'创建旅行伙伴失败: {str(e)}')
         
         # 保存旅行设置信息
@@ -298,9 +298,9 @@ def save_all_data():
         
         try:
             insert_travel_settings(settings)
-            print("旅行设置创建成功，ID:", settings.id)
+            logger.info(f"旅行设置创建成功，ID: {settings.id}")
         except Exception as e:
-            print(f"旅行设置创建失败: {str(e)}")
+            logger.error(f"旅行设置创建失败: {str(e)}")
             return make_err_response(f'创建旅行设置失败: {str(e)}')
         
         return make_succ_response({
