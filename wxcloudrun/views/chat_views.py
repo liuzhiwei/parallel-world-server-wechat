@@ -54,10 +54,6 @@ def _generate_auto_conversation_stream(user_id, session_id, history_data):
             }
             yield f"data: {json.dumps(message_event)}\n\n"
             message_count += 1
-            
-            # 模拟对话间隔
-            import time
-            time.sleep(1.5)
         
         # 发送结束信号
         end_event = {
@@ -189,15 +185,37 @@ def start_auto_conversation():
                 'created_at': msg.created_at.isoformat()
             })
         
-        return Response(
-            _generate_auto_conversation_stream(user_id, session_id, history_data),
-            mimetype='text/event-stream',
-            headers={
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-                'Access-Control-Allow-Origin': '*'
+        # 创建智能体管理器并生成所有消息
+        agent_manager = AgentManager(user_id)
+        messages = []
+        for message_data in agent_manager.generate_multi_round_conversation_stream(history_data):
+            # 过滤掉系统消息，只处理对话消息
+            if message_data['speaker_type'] == 'system':
+                continue
+                
+            # 保存到数据库
+            msg = ChatMessages(
+                user_id=user_id,
+                session_id=session_id,
+                speaker_type=message_data['speaker_type'],
+                message=message_data['message']
+            )
+            insert_chat_message(msg)
+            
+            # 添加到消息列表
+            messages.append({
+                'speaker_type': message_data['speaker_type'],
+                'message': message_data['message'],
+                'created_at': datetime.now().isoformat()
+            })
+        
+        return make_succ_response({
+            'message': '自动对话生成成功',
+            'data': {
+                'messages': messages,
+                'total_messages': len(messages)
             }
-        )
+        })
         
     except Exception as e:
         logger.error(f'自动对话生成失败: {str(e)}')
