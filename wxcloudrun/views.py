@@ -411,21 +411,11 @@ def send_chat_message():
         )
         insert_chat_message(partner_msg)
         
-        # 记录分身继续回复
-        avatar_continue_msg = ChatMessages(
-            user_id=user_id,
-            session_id=session_id,
-            speaker_type='avatar',
-            message=responses['avatar_response']
-        )
-        insert_chat_message(avatar_continue_msg)
-        
         return make_succ_response({
             'message': '消息发送成功',
             'data': {
                 'avatar_message': responses['avatar_message'],
-                'partner_response': responses['partner_response'],
-                'avatar_response': responses['avatar_response']
+                'partner_response': responses['partner_response']
             }
         })
         
@@ -583,7 +573,6 @@ def test_chat_simple():
         # 创建智能体管理器
         agent_manager = AgentManager(test_user_id)
         
-        
         # 测试消息
         test_message = "我们这次去哪里旅行呢？"
         
@@ -596,7 +585,6 @@ def test_chat_simple():
                 'test_user_id': test_user_id,
                 'avatar_message': responses['avatar_message'],
                 'partner_response': responses['partner_response'],
-                'avatar_response': responses['avatar_response'],
                 'test_time': datetime.now().isoformat()
             }
         })
