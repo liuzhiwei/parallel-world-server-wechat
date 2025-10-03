@@ -32,6 +32,46 @@ def init_database():
         return make_err_response(f'数据库初始化失败: {str(e)}')
 
 
+@app.route('/api/check-tables', methods=['GET'])
+def check_tables():
+    """
+    检查数据库表结构
+    :return: 表结构信息
+    """
+    try:
+        from wxcloudrun import db
+        from wxcloudrun.model import Users, DigitalAvatar, TravelPartner, TravelSettings
+        
+        # 检查表是否存在
+        inspector = db.inspect(db.engine)
+        tables = inspector.get_table_names()
+        
+        result = {
+            'tables_exist': tables,
+            'models': []
+        }
+        
+        # 检查每个模型对应的表
+        for model in [Users, DigitalAvatar, TravelPartner, TravelSettings]:
+            table_name = model.__tablename__
+            if table_name in tables:
+                columns = inspector.get_columns(table_name)
+                result['models'].append({
+                    'table_name': table_name,
+                    'columns': [col['name'] for col in columns]
+                })
+            else:
+                result['models'].append({
+                    'table_name': table_name,
+                    'status': 'NOT_EXISTS'
+                })
+        
+        return make_succ_response(result)
+        
+    except Exception as e:
+        return make_err_response(f'检查表结构失败: {str(e)}')
+
+
 @app.route('/api/test-db', methods=['GET'])
 def test_database():
     """
