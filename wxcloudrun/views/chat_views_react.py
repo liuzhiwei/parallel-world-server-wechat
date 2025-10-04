@@ -184,7 +184,8 @@ def start_react_auto_conversation():
         import threading
         def push_messages():
             import time
-            time.sleep(1)  # 等待连接建立
+            logger.info(f"[REACT_API] 开始异步推送消息线程")
+            time.sleep(2)  # 等待WebSocket连接建立
             
             # 测试用固定消息
             test_messages = [
@@ -200,10 +201,14 @@ def start_react_auto_conversation():
             
             # 通过WebSocket推送消息
             from wxcloudrun import socketio
+            logger.info(f"[REACT_API] 准备推送 {len(test_messages)} 条测试消息")
+            
             for i, msg in enumerate(test_messages):
                 time.sleep(1)  # 模拟消息间隔
                 
                 logger.info(f"[REACT_API] WebSocket推送消息 {i+1}/{len(test_messages)}: {msg['speaker_type']}")
+                logger.info(f"[REACT_API] 推送房间: {session_id}")
+                logger.info(f"[REACT_API] 推送消息内容: {msg['message']}")
                 
                 # 发送消息事件
                 socketio.emit('message', {
@@ -221,8 +226,11 @@ def start_react_auto_conversation():
             }, room=session_id)
         
         # 启动异步线程推送消息
+        logger.info(f"[REACT_API] 启动异步推送线程")
         thread = threading.Thread(target=push_messages)
+        thread.daemon = True  # 设置为守护线程
         thread.start()
+        logger.info(f"[REACT_API] 异步推送线程已启动")
         
         return make_succ_response(response_data)
         
