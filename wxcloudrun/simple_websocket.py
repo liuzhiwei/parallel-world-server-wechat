@@ -16,7 +16,18 @@ def init_simple_websocket(app):
     
     @sockets.route('/ws/stream')
     def stream(ws):
-        logger.info(f"[WEBSOCKET] 客户端连接: {request.remote_addr}")
+        logger.info(f"[WEBSOCKET] ========== 客户端连接开始 ==========")
+        logger.info(f"[WEBSOCKET] 客户端IP: {request.remote_addr}")
+        logger.info(f"[WEBSOCKET] WebSocket对象: {ws}")
+        
+        # 发送连接确认消息
+        try:
+            welcome_msg = {"type": "connection", "data": {"message": "WebSocket连接成功"}}
+            ws.send(json.dumps(welcome_msg, ensure_ascii=False))
+            logger.info(f"[WEBSOCKET] 连接确认消息已发送")
+        except Exception as welcome_error:
+            logger.error(f"[WEBSOCKET] 连接确认消息发送失败: {welcome_error}")
+            return
         
         try:
             # 模拟大模型流式输出
@@ -29,8 +40,12 @@ def init_simple_websocket(app):
             
             for i, msg in enumerate(messages):
                 logger.info(f"[WEBSOCKET] 发送消息 {i+1}: {msg}")
-                ws.send(json.dumps(msg, ensure_ascii=False))
-                time.sleep(1)  # 模拟延迟
+                try:
+                    ws.send(json.dumps(msg, ensure_ascii=False))
+                    logger.info(f"[WEBSOCKET] 消息 {i+1} 发送成功")
+                except Exception as send_error:
+                    logger.error(f"[WEBSOCKET] 消息 {i+1} 发送失败: {send_error}")
+                    break
                 
             logger.info(f"[WEBSOCKET] 所有消息发送完成")
             
