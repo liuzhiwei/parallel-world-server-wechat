@@ -248,64 +248,6 @@ def start_react_auto_conversation():
         return make_err_response(f'React模式自动对话生成失败: {str(e)}')
 
 
-# WebSocket 事件处理
-from wxcloudrun import socketio
-
-@socketio.on('connect')
-def handle_connect():
-    from flask_socketio import request
-    logger.info(f'[WEBSOCKET] ✅ 客户端连接成功 - SID: {request.sid}')
-    return True
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    logger.info('[WEBSOCKET] 客户端断开连接')
-
-@socketio.on('join')
-def handle_join(data):
-    from flask_socketio import request
-    logger.info(f'[WEBSOCKET] ✅ 收到加入房间请求: {data}')
-    logger.info(f'[WEBSOCKET] 客户端SID: {request.sid}')
-    
-    session_id = data.get('session_id')
-    if session_id:
-        from flask_socketio import join_room
-        join_room(session_id)
-        logger.info(f'[WEBSOCKET] ✅ 客户端加入房间成功: {session_id}')
-        
-        # 立即推送测试消息
-        push_test_messages(session_id)
-        logger.info(f'[WEBSOCKET] ✅ 测试消息推送完成')
-    else:
-        logger.warning(f'[WEBSOCKET] ❌ 加入房间请求缺少session_id: {data}')
-
-def push_test_messages(session_id):
-    """推送测试消息到指定房间"""
-    from flask_socketio import send
-    import json
-    
-    logger.info(f'[WEBSOCKET] 开始推送测试消息到房间: {session_id}')
-    
-    # 简单的测试消息
-    message_data = {
-        'type': 'message',
-        'data': {
-            'speaker_type': 'avatar',
-            'message': '测试消息：WebSocket连接成功！',
-            'avatar_url': 'https://example.com/avatar.png',
-            'name': '测试分身'
-        },
-        'index': 1,
-        'total': 1
-    }
-    
-    raw_message = f'2["message",{json.dumps(message_data, ensure_ascii=False)}]'
-    logger.info(f'[WEBSOCKET] 发送消息: {raw_message}')
-    
-    try:
-        send(raw_message, room=session_id)
-        logger.info(f'[WEBSOCKET] ✅ 消息发送成功')
-    except Exception as e:
-        logger.error(f'[WEBSOCKET] ❌ 消息发送失败: {e}')
+# 简单的 WebSocket 路由已移动到 simple_websocket.py
 
 # 蓝图注册在 wxcloudrun/__init__.py 中完成

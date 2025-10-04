@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_socketio import SocketIO
 import pymysql
 import config
 import logging
@@ -21,9 +20,6 @@ pymysql.install_as_MySQLdb()
 
 # 初始化web应用
 app = Flask(__name__, instance_relative_config=True)
-
-# 初始化SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 微信云托管静态文件配置
 import os
@@ -76,6 +72,15 @@ except Exception as e:
 
 # 加载配置
 app.config.from_object('config')
+
+# 初始化简单 WebSocket
+from wxcloudrun.simple_websocket import init_simple_websocket
+init_simple_websocket(app)
+
+# 添加简单的健康检查
+@app.route('/ping')
+def ping():
+    return "pong"
 
 # 微信云托管静态文件路由
 @app.route('/uploads/<path:filename>')
