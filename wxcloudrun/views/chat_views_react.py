@@ -254,23 +254,7 @@ from wxcloudrun import socketio
 @socketio.on('connect')
 def handle_connect():
     from flask_socketio import request
-    logger.info(f'[WEBSOCKET] 客户端连接 - SID: {request.sid}')
-    logger.info(f'[WEBSOCKET] 客户端IP: {request.environ.get("REMOTE_ADDR")}')
-    
-    # 立即发送一个测试消息
-    test_msg = {
-        'type': 'connection_test',
-        'data': {'message': 'WebSocket连接测试成功'},
-        'index': 0,
-        'total': 1
-    }
-    import json
-    raw_test_msg = f'2["message",{json.dumps(test_msg, ensure_ascii=False)}]'
-    logger.info(f'[WEBSOCKET] 发送连接测试消息: {raw_test_msg}')
-    from flask_socketio import send
-    send(raw_test_msg, room=request.sid)
-    logger.info(f'[WEBSOCKET] 连接测试消息已发送到SID: {request.sid}')
-    
+    logger.info(f'[WEBSOCKET] ✅ 客户端连接成功 - SID: {request.sid}')
     return True
 
 @socketio.on('disconnect')
@@ -280,100 +264,48 @@ def handle_disconnect():
 @socketio.on('join')
 def handle_join(data):
     from flask_socketio import request
-    logger.info(f'[WEBSOCKET] 收到加入房间请求: {data}')
+    logger.info(f'[WEBSOCKET] ✅ 收到加入房间请求: {data}')
     logger.info(f'[WEBSOCKET] 客户端SID: {request.sid}')
     
     session_id = data.get('session_id')
     if session_id:
         from flask_socketio import join_room
         join_room(session_id)
-        logger.info(f'[WEBSOCKET] 客户端加入房间成功: {session_id}')
+        logger.info(f'[WEBSOCKET] ✅ 客户端加入房间成功: {session_id}')
         
-        # 发送加入确认
-        socketio.emit('joined', {'room': session_id}, room=session_id)
-        logger.info(f'[WEBSOCKET] 发送加入确认消息到房间: {session_id}')
-        
-        # 使用原生WebSocket消息格式发送调试消息
-        from flask_socketio import send
-        debug_message_raw = '2["message",{"type":"debug_direct","data":{"message":"原生WebSocket调试消息"},"index":0,"total":1}]'
-        logger.info(f'[WEBSOCKET] 准备发送调试消息: {debug_message_raw}')
-        logger.info(f'[WEBSOCKET] 目标客户端SID: {request.sid}')
-        try:
-            send(debug_message_raw, room=request.sid)
-            logger.info(f'[WEBSOCKET] ✅ 调试消息发送成功到SID: {request.sid}')
-        except Exception as e:
-            logger.error(f'[WEBSOCKET] ❌ 调试消息发送失败: {e}')
-            logger.error(f'[WEBSOCKET] 错误类型: {type(e).__name__}')
-        
-        # 检查是否有待推送的会话
-        from flask import current_app
-        if hasattr(current_app, 'pending_sessions') and session_id in current_app.pending_sessions:
-            session_info = current_app.pending_sessions[session_id]
-            logger.info(f'[WEBSOCKET] 发现待推送会话，开始推送消息: {session_id}')
-            
-            # 立即推送测试消息
-            push_test_messages(session_id)
-            
-            # 清理已处理的会话
-            del current_app.pending_sessions[session_id]
-            logger.info(f'[WEBSOCKET] 会话 {session_id} 推送完成，已清理')
-        else:
-            logger.info(f'[WEBSOCKET] 会话 {session_id} 无待推送消息')
+        # 立即推送测试消息
+        push_test_messages(session_id)
+        logger.info(f'[WEBSOCKET] ✅ 测试消息推送完成')
     else:
-        logger.warning(f'[WEBSOCKET] 加入房间请求缺少session_id: {data}')
+        logger.warning(f'[WEBSOCKET] ❌ 加入房间请求缺少session_id: {data}')
 
 def push_test_messages(session_id):
     """推送测试消息到指定房间"""
-    from datetime import datetime
     from flask_socketio import send
     import json
     
-    # 测试用固定消息
-    test_messages = [
-        {
+    logger.info(f'[WEBSOCKET] 开始推送测试消息到房间: {session_id}')
+    
+    # 简单的测试消息
+    message_data = {
+        'type': 'message',
+        'data': {
             'speaker_type': 'avatar',
-            'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
-            'created_at': datetime.now().isoformat(),
+            'message': '测试消息：WebSocket连接成功！',
             'avatar_url': 'https://example.com/avatar.png',
-            'name': '旅行分身',
-            'metadata': {'test': True, 'round': 1}
-        }
-    ]
-    
-    logger.info(f'[WEBSOCKET] 开始推送 {len(test_messages)} 条测试消息到房间: {session_id}')
-    
-    for i, msg in enumerate(test_messages):
-        # 使用原生WebSocket格式发送消息
-        message_data = {
-            'type': 'message',
-            'data': msg,
-            'index': i + 1,
-            'total': len(test_messages)
-        }
-        raw_message = f'2["message",{json.dumps(message_data, ensure_ascii=False)}]'
-        logger.info(f'[WEBSOCKET] 推送消息 {i+1}/{len(test_messages)}: {msg["speaker_type"]}')
-        logger.info(f'[WEBSOCKET] 原生消息格式: {raw_message}')
-        logger.info(f'[WEBSOCKET] 目标房间: {session_id}')
-        try:
-            send(raw_message, room=session_id)
-            logger.info(f'[WEBSOCKET] ✅ 消息 {i+1} 发送成功到房间: {session_id}')
-        except Exception as e:
-            logger.error(f'[WEBSOCKET] ❌ 消息 {i+1} 发送失败: {e}')
-            logger.error(f'[WEBSOCKET] 错误类型: {type(e).__name__}')
-    
-    # 发送完成事件
-    complete_data = {
-        'type': 'complete',
-        'total_messages': len(test_messages)
+            'name': '测试分身'
+        },
+        'index': 1,
+        'total': 1
     }
-    complete_raw = f'2["message",{json.dumps(complete_data, ensure_ascii=False)}]'
-    logger.info(f'[WEBSOCKET] 发送完成事件到房间: {session_id}')
-    logger.info(f'[WEBSOCKET] 完成事件原生格式: {complete_raw}')
+    
+    raw_message = f'2["message",{json.dumps(message_data, ensure_ascii=False)}]'
+    logger.info(f'[WEBSOCKET] 发送消息: {raw_message}')
+    
     try:
-        send(complete_raw, room=session_id)
-        logger.info(f'[WEBSOCKET] ✅ 完成事件发送成功到房间: {session_id}')
+        send(raw_message, room=session_id)
+        logger.info(f'[WEBSOCKET] ✅ 消息发送成功')
     except Exception as e:
-        logger.error(f'[WEBSOCKET] ❌ 完成事件发送失败: {e}')
-        logger.error(f'[WEBSOCKET] 错误类型: {type(e).__name__}')
+        logger.error(f'[WEBSOCKET] ❌ 消息发送失败: {e}')
 
 # 蓝图注册在 wxcloudrun/__init__.py 中完成
