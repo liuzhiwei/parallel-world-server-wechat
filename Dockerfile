@@ -1,13 +1,16 @@
 FROM python:3.10-slim
 
-WORKDIR /app
-COPY . /app
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
 
-# 配置 pip 国内源（腾讯云镜像更稳定）
 RUN pip config set global.index-url http://mirrors.cloud.tencent.com/pypi/simple && \
     pip config set global.trusted-host mirrors.cloud.tencent.com
 
-# 安装依赖
+WORKDIR /app
+COPY . /app
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
