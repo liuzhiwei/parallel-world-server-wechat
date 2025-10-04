@@ -210,20 +210,25 @@ def start_react_auto_conversation():
                 logger.info(f"[REACT_API] 推送房间: {session_id}")
                 logger.info(f"[REACT_API] 推送消息内容: {msg['message']}")
                 
-                # 发送消息事件
-                socketio.emit('message', {
+                # 发送消息事件 - 使用Socket.IO原生格式
+                message_data = {
                     'type': 'message',
                     'data': msg,
                     'index': i + 1,
                     'total': len(test_messages)
-                }, room=session_id)
+                }
+                logger.info(f"[REACT_API] 发送消息数据: {message_data}")
+                # 直接发送到房间
+                socketio.emit('message', message_data, room=session_id)
             
             # 发送完成事件
             logger.info(f"[REACT_API] WebSocket发送完成事件")
-            socketio.emit('message', {
+            complete_data = {
                 'type': 'complete',
                 'total_messages': len(test_messages)
-            }, room=session_id)
+            }
+            logger.info(f"[REACT_API] 发送完成数据: {complete_data}")
+            socketio.emit('message', complete_data, room=session_id)
         
         # 启动异步线程推送消息
         logger.info(f"[REACT_API] 启动异步推送线程")
