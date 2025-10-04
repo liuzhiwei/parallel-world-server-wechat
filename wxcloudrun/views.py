@@ -1,5 +1,5 @@
 from flask import render_template
-from run import app
+from wxcloudrun import app
 
 # 导入各个功能模块
 from wxcloudrun.views import db_views, user_views, chat_views

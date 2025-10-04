@@ -2,7 +2,7 @@ from datetime import datetime
 import json
 import logging
 from flask import request, Response, Blueprint
-from run import app
+from wxcloudrun import app
 from wxcloudrun.dao import insert_chat_message, get_chat_messages_by_session
 from wxcloudrun.model import ChatMessages
 from wxcloudrun.agents.agent_manager import AgentManager

@@ -2,7 +2,7 @@ from flask import Response, request, stream_with_context
 from wxcloudrun.ai_service import DeepSeekV3Service
 import json
 import urllib.parse
-from run import app
+from wxcloudrun import app
 
 def create_response(generator):
     """创建统一的响应"""

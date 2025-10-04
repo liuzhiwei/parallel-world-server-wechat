@@ -6,7 +6,7 @@ import logging
 import json
 from datetime import datetime
 from flask import request, Response, Blueprint
-from run import app
+from wxcloudrun import app
 from wxcloudrun.dao import insert_chat_message, get_chat_messages_by_session
 from wxcloudrun.model import ChatMessages
 from wxcloudrun.agents.agent_manager import AgentManager
@@ -248,6 +248,6 @@ def start_react_auto_conversation():
         return make_err_response(f'React模式自动对话生成失败: {str(e)}')
 
 
-# 简单的 WebSocket 路由已移动到 simple_websocket.py
+# WebSocket 路由已在 __init__.py 中实现
 
 # 蓝图注册在 wxcloudrun/__init__.py 中完成

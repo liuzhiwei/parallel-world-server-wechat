@@ -4,6 +4,10 @@ import pymysql
 import config
 import logging
 import sys
+import json
+import os
+
+
 
 # 配置日志
 logging.basicConfig(
@@ -60,7 +64,6 @@ db = SQLAlchemy(app)
 
 # 加载控制器
 from wxcloudrun import views
-from wxcloudrun import websocket_handlers
 
 # 确保React蓝图被注册
 try:
@@ -73,9 +76,26 @@ except Exception as e:
 # 加载配置
 app.config.from_object('config')
 
-# 初始化简单 WebSocket
-from wxcloudrun.simple_websocket import init_simple_websocket
-init_simple_websocket(app)
+# 初始化 WebSocket
+from flask_sock import Sock
+sock = Sock(app)
+
+# 确保 logger 可用
+logger = logging.getLogger('log')
+
+@sock.route("/ws/stream")
+def stream(ws):
+    logger.info("[WEBSOCKET] 客户端连接开始")
+    ws.send(json.dumps({"type": "connection", "data": {"message": "WebSocket连接成功"}}, ensure_ascii=False))
+
+    messages = [
+        {"type": "message", "data": {"message": "你好！", "name": "旅行分身"}},
+        {"type": "message", "data": {"message": "我是你的旅行分身", "name": "旅行分身"}},
+        {"type": "message", "data": {"message": "很高兴为你规划这次旅行！", "name": "旅行分身"}},
+        {"type": "complete", "data": {"total_messages": 3}}
+    ]
+    for msg in messages:
+        ws.send(json.dumps(msg, ensure_ascii=False))
 
 # 添加简单的健康检查
 @app.route('/ping')

@@ -4,7 +4,7 @@ import uuid
 import logging
 from flask import request, Blueprint
 from werkzeug.utils import secure_filename
-from run import app
+from wxcloudrun import app
 from wxcloudrun.dao import insert_digital_avatar, get_digital_avatar_by_user_id, update_digital_avatar, insert_travel_partner, get_travel_partner_by_user_id, update_travel_partner, insert_travel_settings, get_travel_settings_by_user_id, update_travel_settings, ensure_user_exists
 from wxcloudrun.model import DigitalAvatar, TravelPartner, TravelSettings
 from wxcloudrun.response import make_succ_response, make_err_response
