@@ -253,7 +253,24 @@ from wxcloudrun import socketio
 
 @socketio.on('connect')
 def handle_connect():
-    logger.info('[WEBSOCKET] 客户端连接')
+    from flask_socketio import request
+    logger.info(f'[WEBSOCKET] 客户端连接 - SID: {request.sid}')
+    logger.info(f'[WEBSOCKET] 客户端IP: {request.environ.get("REMOTE_ADDR")}')
+    
+    # 立即发送一个测试消息
+    test_msg = {
+        'type': 'connection_test',
+        'data': {'message': 'WebSocket连接测试成功'},
+        'index': 0,
+        'total': 1
+    }
+    import json
+    raw_test_msg = f'2["message",{json.dumps(test_msg, ensure_ascii=False)}]'
+    logger.info(f'[WEBSOCKET] 发送连接测试消息: {raw_test_msg}')
+    from flask_socketio import send
+    send(raw_test_msg, room=request.sid)
+    logger.info(f'[WEBSOCKET] 连接测试消息已发送到SID: {request.sid}')
+    
     return True
 
 @socketio.on('disconnect')
