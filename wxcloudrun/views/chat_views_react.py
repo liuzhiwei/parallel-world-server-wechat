@@ -169,38 +169,62 @@ def start_react_auto_conversation():
         max_rounds = params.get('max_rounds', 6)
         logger.info(f"[REACT_API] 对话参数: min_rounds={min_rounds}, max_rounds={max_rounds}")
         
-        logger.info(f"[REACT_API] 开始生成对话消息")
+        logger.info(f"[REACT_API] 开始生成WebSocket对话")
         
-        # 测试用固定消息
-        test_messages = [
-            {
-                'speaker_type': 'avatar',
-                'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
-                'created_at': datetime.now().isoformat(),
-                'metadata': {'test': True, 'round': 1}
-            }
-        ]
-        
-        logger.info(f"[REACT_API] 生成消息完成，消息数量: {len(test_messages)}")
-        
-        # 构造响应数据 - 直接在 data 层包含 messages
+        # 立即返回成功，然后通过WebSocket推送消息
         response_data = {
-            'messages': test_messages,
-            'total_messages': len(test_messages),
-            'conversation_summary': {
-                'total_rounds': 1,
-                'total_messages': len(test_messages),
-                'conversation_phase': 'test',
-                'current_topic': '测试对话',
-                'mode': 'test'
-            },
-            'mode': 'react'
+            'message': 'WebSocket连接已建立，开始推送消息',
+            'session_id': session_id,
+            'status': 'connected'
         }
         
-        logger.info(f"[REACT_API] 准备返回响应，消息数量: {len(test_messages)}")
-        response = make_succ_response(response_data)
-        logger.info(f"[REACT_API] 响应构造完成")
-        return response
+        logger.info(f"[REACT_API] 返回连接成功响应，准备推送WebSocket消息")
+        
+        # 异步推送消息到WebSocket
+        import threading
+        def push_messages():
+            import time
+            time.sleep(1)  # 等待连接建立
+            
+            # 测试用固定消息
+            test_messages = [
+                {
+                    'speaker_type': 'avatar',
+                    'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
+                    'created_at': datetime.now().isoformat(),
+                    'avatar_url': 'https://example.com/avatar.png',
+                    'name': '旅行分身',
+                    'metadata': {'test': True, 'round': 1}
+                }
+            ]
+            
+            # 通过WebSocket推送消息
+            from wxcloudrun import socketio
+            for i, msg in enumerate(test_messages):
+                time.sleep(1)  # 模拟消息间隔
+                
+                logger.info(f"[REACT_API] WebSocket推送消息 {i+1}/{len(test_messages)}: {msg['speaker_type']}")
+                
+                # 发送消息事件
+                socketio.emit('message', {
+                    'type': 'message',
+                    'data': msg,
+                    'index': i + 1,
+                    'total': len(test_messages)
+                }, room=session_id)
+            
+            # 发送完成事件
+            logger.info(f"[REACT_API] WebSocket发送完成事件")
+            socketio.emit('message', {
+                'type': 'complete',
+                'total_messages': len(test_messages)
+            }, room=session_id)
+        
+        # 启动异步线程推送消息
+        thread = threading.Thread(target=push_messages)
+        thread.start()
+        
+        return make_succ_response(response_data)
         
         # 注释掉原来的AI生成逻辑，用于测试
         """
@@ -266,5 +290,26 @@ def start_react_auto_conversation():
         logger.error(f'[REACT_API] 错误堆栈: {traceback.format_exc()}')
         return make_err_response(f'React模式自动对话生成失败: {str(e)}')
 
+
+# WebSocket 事件处理
+from wxcloudrun import socketio
+
+@socketio.on('connect')
+def handle_connect():
+    logger.info('[WEBSOCKET] 客户端连接')
+    return True
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info('[WEBSOCKET] 客户端断开连接')
+
+@socketio.on('join')
+def handle_join(data):
+    session_id = data.get('session_id')
+    if session_id:
+        from flask_socketio import join_room
+        join_room(session_id)
+        logger.info(f'[WEBSOCKET] 客户端加入房间: {session_id}')
+        socketio.emit('joined', {'room': session_id}, room=session_id)
 
 # 蓝图注册在 wxcloudrun/__init__.py 中完成

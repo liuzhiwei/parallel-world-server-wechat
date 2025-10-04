@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO
 import pymysql
 import config
 import logging
@@ -20,6 +21,9 @@ pymysql.install_as_MySQLdb()
 
 # 初始化web应用
 app = Flask(__name__, instance_relative_config=True)
+
+# 初始化SocketIO
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 微信云托管静态文件配置
 import os
