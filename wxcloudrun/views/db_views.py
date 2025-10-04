@@ -1,7 +1,7 @@
 from datetime import datetime
 import logging
 from flask import Blueprint
-from run import app
+from wxcloudrun import app
 from wxcloudrun.response import make_succ_response, make_err_response
 
 # 初始化日志
