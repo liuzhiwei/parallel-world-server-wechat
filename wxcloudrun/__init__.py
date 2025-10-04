@@ -6,7 +6,7 @@ app = Flask(__name__)
 sock = Sock(app)
 logger = logging.getLogger("log")
 
-@app.route("/ping")
+@app.get("/ping")
 def ping():
     return "pong"
 
