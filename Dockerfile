@@ -14,4 +14,6 @@ COPY . /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 EXPOSE 80
-CMD ["gunicorn", "-b", "0.0.0.0:80", "run:app"]
+
+# 启动命令，支持微信云托管的 PORT
+CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT:-80} run:app"]
