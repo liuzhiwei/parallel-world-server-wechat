@@ -180,62 +180,19 @@ def start_react_auto_conversation():
         
         logger.info(f"[REACT_API] 返回连接成功响应，准备推送WebSocket消息")
         
-        # 异步推送消息到WebSocket
-        import threading
-        def push_messages():
-            import time
-            logger.info(f"[REACT_API] 开始异步推送消息线程")
-            time.sleep(2)  # 等待WebSocket连接建立
-            
-            # 测试用固定消息
-            test_messages = [
-                {
-                    'speaker_type': 'avatar',
-                    'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
-                    'created_at': datetime.now().isoformat(),
-                    'avatar_url': 'https://example.com/avatar.png',
-                    'name': '旅行分身',
-                    'metadata': {'test': True, 'round': 1}
-                }
-            ]
-            
-            # 通过WebSocket推送消息
-            from wxcloudrun import socketio
-            logger.info(f"[REACT_API] 准备推送 {len(test_messages)} 条测试消息")
-            
-            for i, msg in enumerate(test_messages):
-                time.sleep(1)  # 模拟消息间隔
-                
-                logger.info(f"[REACT_API] WebSocket推送消息 {i+1}/{len(test_messages)}: {msg['speaker_type']}")
-                logger.info(f"[REACT_API] 推送房间: {session_id}")
-                logger.info(f"[REACT_API] 推送消息内容: {msg['message']}")
-                
-                # 发送消息事件 - 使用Socket.IO原生格式
-                message_data = {
-                    'type': 'message',
-                    'data': msg,
-                    'index': i + 1,
-                    'total': len(test_messages)
-                }
-                logger.info(f"[REACT_API] 发送消息数据: {message_data}")
-                # 直接发送到房间
-                socketio.emit('message', message_data, room=session_id)
-            
-            # 发送完成事件
-            logger.info(f"[REACT_API] WebSocket发送完成事件")
-            complete_data = {
-                'type': 'complete',
-                'total_messages': len(test_messages)
-            }
-            logger.info(f"[REACT_API] 发送完成数据: {complete_data}")
-            socketio.emit('message', complete_data, room=session_id)
+        # 使用 Flask 应用上下文存储会话信息（更优雅的方式）
+        from flask import current_app
+        if not hasattr(current_app, 'pending_sessions'):
+            current_app.pending_sessions = {}
         
-        # 启动异步线程推送消息
-        logger.info(f"[REACT_API] 启动异步推送线程")
-        thread = threading.Thread(target=push_messages)
-        thread.daemon = True  # 设置为守护线程
-        thread.start()
-        logger.info(f"[REACT_API] 异步推送线程已启动")
+        current_app.pending_sessions[session_id] = {
+            'user_id': user_id,
+            'min_rounds': min_rounds,
+            'max_rounds': max_rounds,
+            'created_at': datetime.now()
+        }
+        
+        logger.info(f"[REACT_API] 会话 {session_id} 已准备就绪，等待前端加入房间")
         
         return make_succ_response(response_data)
         
@@ -318,11 +275,69 @@ def handle_disconnect():
 
 @socketio.on('join')
 def handle_join(data):
+    logger.info(f'[WEBSOCKET] 收到加入房间请求: {data}')
     session_id = data.get('session_id')
     if session_id:
         from flask_socketio import join_room
         join_room(session_id)
-        logger.info(f'[WEBSOCKET] 客户端加入房间: {session_id}')
+        logger.info(f'[WEBSOCKET] 客户端加入房间成功: {session_id}')
+        
+        # 发送加入确认
         socketio.emit('joined', {'room': session_id}, room=session_id)
+        logger.info(f'[WEBSOCKET] 发送加入确认消息到房间: {session_id}')
+        
+        # 检查是否有待推送的会话
+        from flask import current_app
+        if hasattr(current_app, 'pending_sessions') and session_id in current_app.pending_sessions:
+            session_info = current_app.pending_sessions[session_id]
+            logger.info(f'[WEBSOCKET] 发现待推送会话，开始推送消息: {session_id}')
+            
+            # 立即推送测试消息
+            push_test_messages(session_id)
+            
+            # 清理已处理的会话
+            del current_app.pending_sessions[session_id]
+            logger.info(f'[WEBSOCKET] 会话 {session_id} 推送完成，已清理')
+        else:
+            logger.info(f'[WEBSOCKET] 会话 {session_id} 无待推送消息')
+    else:
+        logger.warning(f'[WEBSOCKET] 加入房间请求缺少session_id: {data}')
+
+def push_test_messages(session_id):
+    """推送测试消息到指定房间"""
+    from datetime import datetime
+    
+    # 测试用固定消息
+    test_messages = [
+        {
+            'speaker_type': 'avatar',
+            'message': '你好！我是你的旅行分身，很高兴为你规划这次旅行！',
+            'created_at': datetime.now().isoformat(),
+            'avatar_url': 'https://example.com/avatar.png',
+            'name': '旅行分身',
+            'metadata': {'test': True, 'round': 1}
+        }
+    ]
+    
+    logger.info(f'[WEBSOCKET] 开始推送 {len(test_messages)} 条测试消息到房间: {session_id}')
+    
+    for i, msg in enumerate(test_messages):
+        # 发送消息事件
+        message_data = {
+            'type': 'message',
+            'data': msg,
+            'index': i + 1,
+            'total': len(test_messages)
+        }
+        logger.info(f'[WEBSOCKET] 推送消息 {i+1}/{len(test_messages)}: {msg["speaker_type"]}')
+        socketio.emit('message', message_data, room=session_id)
+    
+    # 发送完成事件
+    complete_data = {
+        'type': 'complete',
+        'total_messages': len(test_messages)
+    }
+    logger.info(f'[WEBSOCKET] 发送完成事件到房间: {session_id}')
+    socketio.emit('message', complete_data, room=session_id)
 
 # 蓝图注册在 wxcloudrun/__init__.py 中完成
