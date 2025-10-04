@@ -157,7 +157,7 @@ def start_auto_conversation():
     try:
         logger.info(f"[CHAT_API] 收到自动对话请求")
         logger.info(f"[CHAT_API] 请求来源: {request.remote_addr}")
-        logger.info(f"[CHAT_API] 请求头: {dict(request.headers)}")
+        # logger.info(f"[CHAT_API] 请求头: {dict(request.headers)}")
         
         params = request.get_json()
         logger.info(f"[CHAT_API] 请求参数: {params}")
