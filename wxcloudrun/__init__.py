@@ -82,6 +82,12 @@ init_simple_websocket(app)
 def ping():
     return "pong"
 
+# 添加WebSocket测试接口
+@app.route('/test/websocket')
+def test_websocket():
+    logger.info("[TEST] WebSocket测试接口被调用")
+    return {"status": "ok", "message": "WebSocket服务正常", "websocket_route": "/ws/stream"}
+
 # 微信云托管静态文件路由
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
