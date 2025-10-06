@@ -5,8 +5,8 @@ import time
 import logging
 from flask import request, Blueprint
 from werkzeug.utils import secure_filename
-from ..db.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session
-from ..db.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
+from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session
+from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
 from ..response import make_succ_response, make_err_response
 from ..wechat_config import WeChatCloudConfig
 

@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict
 from datetime import datetime
 import logging
-from ..db.model import ChatMessages, DigitalAvatar, TravelPartner, TravelSettings, ChatTopics
-from ..db.dao import insert_chat_message, get_chat_messages_by_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, get_user_sessions, insert_chat_topic, get_session_topics
+from ..dbops.model import ChatMessages, DigitalAvatar, TravelPartner, TravelSettings, ChatTopics
+from ..dbops.dao import insert_chat_message, get_chat_messages_by_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, get_user_sessions, insert_chat_topic, get_session_topics
 
 # 配置logging
 logger = logging.getLogger(__name__)
