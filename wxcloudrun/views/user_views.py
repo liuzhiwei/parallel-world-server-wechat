@@ -3,11 +3,11 @@ import os
 import uuid
 import time
 import logging
-from flask import request, Blueprint
+import json
+from flask import request, Blueprint, Response
 from werkzeug.utils import secure_filename
 from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
-from ..response import make_succ_response, make_err_response
 from ..wechat_config import WeChatCloudConfig
 
 # 初始化日志
@@ -15,6 +15,21 @@ logger = logging.getLogger('log')
 
 # 创建蓝图
 user_bp = Blueprint('user', __name__, url_prefix='/api')
+
+def make_succ_empty_response():
+    data = json.dumps({'code': 0, 'data': {}})
+    return Response(data, mimetype='application/json')
+
+
+def make_succ_response(data):
+    data = json.dumps({'code': 0, 'data': data})
+    return Response(data, mimetype='application/json')
+
+
+def make_err_response(err_msg):
+    data = json.dumps({'code': -1, 'errorMsg': err_msg})
+    return Response(data, mimetype='application/json')
+
 
 @user_bp.route('/user', methods=['POST'])
 def create_user():
