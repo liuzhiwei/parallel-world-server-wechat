@@ -8,7 +8,7 @@ from wxcloudrun.agent.thought import Thought
 from .dialogue_context import DialogueContext
 from .digital_avatar import DigitalAvatar
 from .digital_partner import DigitalPartner
-from ..id.id_gen import new_message_id
+from ..idgeneration.id_gen import new_message_id
 
 logger = logging.getLogger("log")
 

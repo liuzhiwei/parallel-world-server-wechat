@@ -189,7 +189,7 @@ def upload_avatar():
         return make_err_response(f'文件上传失败: {str(e)}')
 
 
-@user_bp.route('/api/create-session', methods=['POST'])
+@user_bp.route('/create-session', methods=['POST'])
 def create_session():
     """创建新的聊天会话"""
     try:
