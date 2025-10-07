@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from wxcloudrun import db
 
@@ -11,8 +11,8 @@ class Users(db.Model):
     # 设定结构体对应表格的字段
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), nullable=False, unique=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 数字分身表
@@ -27,8 +27,8 @@ class DigitalAvatar(db.Model):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
     avatar_url = db.Column(db.String(500), nullable=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 旅行伙伴表
@@ -43,8 +43,8 @@ class TravelPartner(db.Model):
     partner_name = db.Column(db.String(100), nullable=False)
     partner_description = db.Column(db.Text, nullable=True)
     partner_avatar_url = db.Column(db.String(500), nullable=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 旅行设置表
@@ -58,8 +58,8 @@ class TravelSettings(db.Model):
     destination = db.Column(db.String(200), nullable=True)
     days = db.Column(db.Integer, nullable=True)
     preference = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 聊天会话表
@@ -71,7 +71,7 @@ class ChatSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.String(100), nullable=False, index=True)
     user_id = db.Column(db.String(100), nullable=False, index=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 聊天话题表
@@ -101,7 +101,7 @@ class ChatMessages(db.Model):
     speaker_type = db.Column(db.Enum('user', 'avatar', 'partner'), nullable=False)
     message_id = db.Column(db.String(100), nullable=False, index=True)
     message = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=datetime.now())
+    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
     
     # 添加复合索引，允许多条消息但防止完全重复
     __table_args__ = (

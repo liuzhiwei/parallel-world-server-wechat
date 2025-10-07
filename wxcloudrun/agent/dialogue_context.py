@@ -16,7 +16,6 @@ class HistoryItem:
     speaker_type: str
     message_id: str
     message_content: str
-    created_at: str
 
 
 class DialogueContext:
@@ -102,7 +101,6 @@ class DialogueContext:
                 session_id=self.session_id,
                 destination=destination,
                 topic=topic_text,
-                created_at=datetime.now()
             )
             
             insert_chat_topic(new_topic)
@@ -175,8 +173,6 @@ class DialogueContext:
             if not message_content:
                 raise ValueError("message_content is required")
 
-            created_at_time = datetime.now().isoformat()
-            
             # 创建数据库记录
             chat_message = ChatMessages(
                 user_id=self.user_id,
@@ -185,7 +181,6 @@ class DialogueContext:
                 speaker_type=speaker_type,
                 message_id=message_id,
                 message=message_content,
-                created_at=created_at_time
             )
             
             # 插入数据库
@@ -197,7 +192,6 @@ class DialogueContext:
                 speaker_type=speaker_type,
                 message_id=message_id,
                 message_content=message_content,
-                created_at=created_at_time
             )
             
             # 更新内存中的history
@@ -211,7 +205,6 @@ class DialogueContext:
                 speaker_type=speaker_type,
                 message_id=message_id,
                 message_content=message_content,
-                created_at=created_at_time
             )
             self.history.append(history_item)
         
@@ -233,7 +226,6 @@ class DialogueContext:
                     speaker_type=msg.speaker_type,
                     message_id=msg.message_id,
                     message_content=msg.message,
-                    created_at=msg.created_at.isoformat()
                 )
                 self.history.append(history_item)
                 

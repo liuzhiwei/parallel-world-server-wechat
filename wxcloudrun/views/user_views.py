@@ -91,7 +91,6 @@ def save_all_data():
         
         # 确保用户存在
         ensure_user_exists(user_id)
-        time = datetime.now().isoformat(),
 
         # 保存分身信息
         avatar = DigitalAvatar(
@@ -100,8 +99,6 @@ def save_all_data():
             name=avatar_data['name'],
             description=avatar_data['description'],
             avatar_url=avatar_data['avatar_url'],
-            created_at=time,
-            updated_at=time
         )
         insert_digital_avatar(avatar)
         
@@ -112,8 +109,6 @@ def save_all_data():
             partner_name=partner_data['partner_name'],
             partner_description=partner_data['partner_description'],
             partner_avatar_url=partner_data['partner_avatar_url'],
-            created_at=time,
-            updated_at=time
         )
         insert_travel_partner(partner)
         
@@ -123,8 +118,6 @@ def save_all_data():
             destination=settings_data['destination'],
             days=settings_data['days'],
             preference=settings_data['preference'],
-            created_at=time,
-            updated_at=time
         )
         insert_travel_settings(settings)
         
@@ -206,15 +199,13 @@ def create_session():
         session = ChatSession(
             session_id=session_id,
             user_id=user_id,
-            created_at=datetime.now().isoformat()
         )
         
         # 插入数据库
         insert_chat_session(session)
         
         return make_succ_response({
-            'session_id': session_id,
-            'created_at': session.created_at.isoformat()
+            'session_id': session_id
         })
         
     except Exception as e:
