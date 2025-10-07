@@ -1,5 +1,5 @@
 import os
-from wxcloudrun import app
+from wxcloudrun import create_app
 
 app = create_app()
 
