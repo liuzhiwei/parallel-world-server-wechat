@@ -115,9 +115,31 @@ class DialogueContext:
         try:
             logger.info(f"开始查询用户 {self.user_id} 的数字分身数据")
             
-            # 测试数据库连接
+            # 详细的数据库调试信息
+            from sqlalchemy import text, inspect
             from .. import db
-            logger.info(f"数据库连接状态: {db.session.is_active}")
+            
+            engine = db.get_engine()
+            logger.info(f"[DB] engine.url = {engine.url!s}")   # e.g. sqlite:////app/instance/app.db
+            
+            with engine.connect() as conn:
+                # SQLite: 看看当前 attach 的文件路径
+                try:
+                    rows = conn.execute(text("PRAGMA database_list")).all()
+                    logger.info(f"[DB] PRAGMA database_list = {rows}")  # 包含 main 的绝对路径
+                except Exception as _:
+                    pass
+                
+                # 列出当前库的表
+                tables = inspect(engine).get_table_names()
+                logger.info(f"[DB] tables = {tables}")
+                
+                # 直接裸查计数，绕过 ORM
+                try:
+                    cnt = conn.execute(text('SELECT COUNT(*) FROM "DigitalAvatar"')).scalar_one()
+                    logger.info(f'[DB] COUNT("DigitalAvatar") = {cnt}')
+                except Exception as e:
+                    logger.error(f'[DB] COUNT 出错: {e}')
             
             # 先查询所有记录看看
             all_avatars = DigitalAvatar.query.all()
