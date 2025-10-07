@@ -113,6 +113,26 @@ class DialogueContext:
     def load_digital_avatar_from_db(self):
         """从数据库加载用户个人资料数据"""
         try:
+            logger.info(f"开始查询用户 {self.user_id} 的数字分身数据")
+            
+            # 测试数据库连接
+            from .. import db
+            logger.info(f"数据库连接状态: {db.session.is_active}")
+            
+            # 先查询所有记录看看
+            all_avatars = DigitalAvatar.query.all()
+            logger.info(f"数据库中总共有 {len(all_avatars)} 条 DigitalAvatar 记录")
+            
+            # 打印前几条记录的user_id用于对比
+            for i, avatar in enumerate(all_avatars[:3]):
+                logger.info(f"记录 {i+1}: user_id='{avatar.user_id}', name='{avatar.name}'")
+            
+            # 查询特定用户的所有记录
+            user_avatars = DigitalAvatar.query.filter(
+                DigitalAvatar.user_id == self.user_id
+            ).all()
+            logger.info(f"用户 {self.user_id} 有 {len(user_avatars)} 条数字分身记录")
+            
             # 加载数字分身数据（获取最近一条）
             self.digital_avatar = DigitalAvatar.query.filter(
                 DigitalAvatar.user_id == self.user_id
@@ -127,7 +147,7 @@ class DialogueContext:
             else:
                 logger.warning(f"未找到用户 {self.user_id} 的数字分身数据")
         except Exception as e:
-            logger.error(f"加载用户数据失败: {e}")
+            logger.error(f"加载用户数据失败: {e}", exc_info=True)
     
     def load_travel_partner_from_db(self):
         """从数据库加载用户个人资料数据"""
