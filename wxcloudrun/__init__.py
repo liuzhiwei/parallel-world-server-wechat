@@ -1,28 +1,44 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_sock import Sock
-import os, threading, logging
+import os, threading, logging, sys
 
 db = SQLAlchemy()
 sock = Sock()
 
 def create_app():
 
-    app = Flask(__name__)
+    # 1) 使用 instance_relative_config，启用实例目录（/app/instance）
+    #    便于把 data.db 放到实例目录，且可加载实例级 config.py
+    app = Flask(__name__, instance_relative_config=True)
     
-    # 配置日志
+    # 2) 日志：同时输出到控制台与文件（app.log）
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(sys.stdout),
+            logging.FileHandler(os.path.join(app.instance_path, "app.log"))
+        ],
     )
 
-    app.config.setdefault('SQLALCHEMY_DATABASE_URI',
-                          os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///data.db'))
-    app.config.setdefault('SQLALCHEMY_TRACK_MODIFICATIONS', False)
+    # 3) 数据库
+    # 读取数据库环境变量
+    db_username = os.environ.get("MYSQL_USERNAME", 'root')
+    db_password = os.environ.get("MYSQL_PASSWORD", 'root')
+    db_address = os.environ.get("MYSQL_ADDRESS", '127.0.0.1:3306')
+    # 设定数据库链接
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(db_username, 
+                                                                                 db_password,
+                                                                                 db_address)
+    # 禁用SQLAlchemy修改跟踪（减少开销）
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    # 4) 初始化扩展
     db.init_app(app)
     sock.init_app(app)
 
+    # 5) 路由与蓝图
     from .views.api import register_api_routes
     from .views.websocket import register_websocket_routes, get_event_queue
     from .views.user_views import user_bp
@@ -34,12 +50,7 @@ def create_app():
     app.register_blueprint(user_bp)
     app.register_blueprint(test_bp)
 
-    # 自动创建数据库表
-    with app.app_context():
-        from .dbops import model  # 导入所有模型
-        db.create_all()
-
-    # 在应用上下文里启动后台线程（关键！）
+    # 6)在应用上下文里启动后台线程（关键！）
     def _run_dispatch_in_ctx(q, stop_event):
         with app.app_context():
             start_dispatch(q, stop_event)
