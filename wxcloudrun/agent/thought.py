@@ -1,5 +1,5 @@
 
-from ..services.ai_service import DeepSeekV3Service
+from ..llm.ai_service import DeepSeekV3Service
 from string import Template
 
 

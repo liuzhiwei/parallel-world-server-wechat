@@ -1,5 +1,5 @@
 
-from ..services.ai_service import DeepSeekV3Service
+from ..llm.ai_service import DeepSeekV3Service
 from .dialogue_context import DialogueContext
 from .thought import ThoughtResult
 from string import Template
