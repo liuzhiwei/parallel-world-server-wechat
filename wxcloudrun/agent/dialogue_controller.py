@@ -24,9 +24,17 @@ class DialogueController:
         
         # 思考
         thought_result = self.thought(user_id)
+        
+        if thought_result is None:
+            logger.error(f"Thought failed for user {user_id}")
+            return None
 
         # 调用工具
         speak_result = self.act(user_id, thought_result)
+        
+        if not speak_result or "text" not in speak_result:
+            logger.error(f"Act failed for user {user_id}")
+            return None
 
         # 反思
         self.reflect(user_id)
@@ -78,18 +86,31 @@ class DialogueController:
             avatar = DigitalAvatar()
             speak_text = avatar.speak(self.user_context[user_id], thought_result)
             speak_result = {"text": speak_text}
+            
+            # 检查digital_avatar是否存在
+            if not self.user_context[user_id].digital_avatar:
+                logger.error(f"Digital avatar not found for user {user_id}")
+                raise ValueError(f"Digital avatar not found for user {user_id}")
+            
             speak_result["speaker_id"] = self.user_context[user_id].digital_avatar.avatar_id
-            speak_result["speaker_type"] = "avatar"
             speak_result["agent_name"] = self.user_context[user_id].digital_avatar.name
             speak_result["agent_photo_url"] = self.user_context[user_id].digital_avatar.avatar_url
+            speak_result["speaker_type"] = "avatar"
+            
         elif thought_result.turn_action == TurnAction.SPEAK_TRAVEL_PARTNER:
             partner = DigitalPartner()
             speak_text = partner.speak(self.user_context[user_id], thought_result)
             speak_result = {"text": speak_text}
+            
+            # 检查travel_partner是否存在
+            if not self.user_context[user_id].travel_partner:
+                logger.error(f"Travel partner not found for user {user_id}")
+                raise ValueError(f"Travel partner not found for user {user_id}")
+            
             speak_result["speaker_id"] = self.user_context[user_id].travel_partner.partner_id
-            speak_result["speaker_type"] = "partner"
             speak_result["agent_name"] = self.user_context[user_id].travel_partner.partner_name
             speak_result["agent_photo_url"] = self.user_context[user_id].travel_partner.partner_avatar_url
+            speak_result["speaker_type"] = "partner"
 
         speak_result["message_id"] = new_message_id()
         return speak_result

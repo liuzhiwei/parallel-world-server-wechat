@@ -9,16 +9,6 @@ logger = logging.getLogger(__name__)
 test_bp = Blueprint('test', __name__, url_prefix='/test')
 
 
-@test_bp.route('/ping', methods=['GET'])
-def test_ping():
-    """简单的ping测试"""
-    return jsonify({
-        'code': 0,
-        'message': 'Test blueprint is working',
-        'timestamp': time.time()
-    })
-
-
 @test_bp.route('/step', methods=['POST'])
 def test_step():
     """

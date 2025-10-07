@@ -70,7 +70,12 @@ class DialogueContext:
                 )
                 self.history.append(history_item)
             
-            logger.info(f"从数据库加载了 {len(recent_messages)} 条对话历史")
+            if recent_messages:
+                logger.info(f"从数据库加载了 {len(recent_messages)} 条对话历史")
+                for i, msg in enumerate(recent_messages[:3]):  # 只打印前3条作为示例
+                    logger.info(f"  历史记录 {i+1}: {msg.speaker_type} - {msg.message[:50]}...")
+            else:
+                logger.warning(f"未找到用户 {self.user_id} 的对话历史记录")
         except Exception as e:
             logger.error(f"从数据库加载对话历史失败: {e}")
     
@@ -83,7 +88,7 @@ class DialogueContext:
             ).order_by(ChatTopics.created_at.desc()).limit(limit).all()
             
             if not recent_topics:
-                logger.info("未找到任何话题记录")
+                logger.warning(f"未找到用户 {self.user_id} 的任何话题记录")
                 return
             
             # 最新的作为current_topic
@@ -100,6 +105,8 @@ class DialogueContext:
                     self.topic_history[destination].append(topic_record.topic)
             
             logger.info(f"从数据库加载了 {len(recent_topics)} 个话题，当前话题: {self.current_topic}")
+            for dest, topics in self.topic_history.items():
+                logger.info(f"  目的地 [{dest}]: {topics[:3]}")  # 只显示前3个话题
         except Exception as e:
             logger.error(f"从数据库加载话题失败: {e}")
 
@@ -111,7 +118,14 @@ class DialogueContext:
                 DigitalAvatar.user_id == self.user_id
             ).order_by(DigitalAvatar.created_at.desc()).first()
             
-            logger.info(f"成功加载用户资料")
+            if self.digital_avatar:
+                logger.info(f"成功加载数字分身数据: avatar_id={self.digital_avatar.avatar_id}, "
+                           f"name={self.digital_avatar.name}, "
+                           f"description={self.digital_avatar.description}, "
+                           f"avatar_url={self.digital_avatar.avatar_url}, "
+                           f"created_at={self.digital_avatar.created_at}")
+            else:
+                logger.warning(f"未找到用户 {self.user_id} 的数字分身数据")
         except Exception as e:
             logger.error(f"加载用户数据失败: {e}")
     
@@ -123,7 +137,14 @@ class DialogueContext:
                 TravelPartner.user_id == self.user_id
             ).order_by(TravelPartner.created_at.desc()).first()
             
-            logger.info(f"成功加载用户资料")
+            if self.travel_partner:
+                logger.info(f"成功加载旅行伙伴数据: partner_id={self.travel_partner.partner_id}, "
+                           f"partner_name={self.travel_partner.partner_name}, "
+                           f"partner_description={self.travel_partner.partner_description}, "
+                           f"partner_avatar_url={self.travel_partner.partner_avatar_url}, "
+                           f"created_at={self.travel_partner.created_at}")
+            else:
+                logger.warning(f"未找到用户 {self.user_id} 的旅行伙伴数据")
         except Exception as e:
             logger.error(f"加载用户数据失败: {e}")
 
@@ -135,7 +156,15 @@ class DialogueContext:
                 TravelSettings.user_id == self.user_id
             ).order_by(TravelSettings.created_at.desc()).first()
             
-            logger.info(f"成功加载用户资料")
+            if self.travel_settings:
+                logger.info(f"成功加载旅行设置数据: settings_id={self.travel_settings.settings_id}, "
+                           f"destination={self.travel_settings.destination}, "
+                           f"travel_days={self.travel_settings.travel_days}, "
+                           f"travel_preference={self.travel_settings.travel_preference}, "
+                           f"budget_range={self.travel_settings.budget_range}, "
+                           f"created_at={self.travel_settings.created_at}")
+            else:
+                logger.warning(f"未找到用户 {self.user_id} 的旅行设置数据")
         except Exception as e:
             logger.error(f"加载用户数据失败: {e}")
     
