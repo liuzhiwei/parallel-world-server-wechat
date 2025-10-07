@@ -9,7 +9,7 @@ from .digital_partner import DigitalPartner
 from .agent_data import TurnAction
 from ..idgeneration.id_gen import new_message_id
 
-logger = logging.getLogger("log")
+logger = logging.getLogger(__name__)
 
 
 class DialogueController:

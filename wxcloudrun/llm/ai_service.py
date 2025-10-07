@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Dict
 
 # 初始化日志
-logger = logging.getLogger('log')
+logger = logging.getLogger(__name__)
 
 
 class DeepSeekV3Service:

@@ -1,7 +1,7 @@
 from flask_sock import Sock
 import json, logging, time, threading, queue
 
-logger = logging.getLogger("log")
+logger = logging.getLogger(__name__)
 
 # 全局事件队列：用于跨线程传递 (user_id, ws) 及控制事件
 event_q: "queue.Queue" = queue.Queue()

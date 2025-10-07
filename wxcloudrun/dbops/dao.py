@@ -6,7 +6,7 @@ from wxcloudrun import db
 from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSettings, ChatMessages, ChatSession, ChatTopics
 
 # 初始化日志
-logger = logging.getLogger('log')
+logger = logging.getLogger(__name__)
 
 
 # 用户相关DAO函数

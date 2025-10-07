@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from typing import List, Optional, Any, Dict, Tuple, Type, TypeVar
+import json
 
 
 # ----- Enums -----
@@ -103,13 +104,27 @@ class ThoughtResult:
 
     # ---- Non-throwing parse helper ----
     @classmethod
-    def try_from_dict(cls, data: Dict[str, Any]) -> Tuple[Optional["ThoughtResult"], Optional[str]]:
+    def try_from_dict(cls, data: str) -> Tuple[Optional["ThoughtResult"], Optional[str]]:
+        """
+        从JSON字符串解析ThoughtResult对象
+        
+        Args:
+            data: JSON字符串
+            
+        Returns:
+            (ThoughtResult对象, 错误信息) 元组
+        """
         try:
-            obj = cls.from_dict(data)
+            # 解析JSON字符串
+            dict_data = json.loads(data)
+            
+            obj = cls.from_dict(dict_data)
             err = obj.validate()
             if err:
                 return None, f"validation failed: {err}"
             return obj, None
+        except json.JSONDecodeError as e:
+            return None, f"JSON parse failed: {e}"
         except Exception as e:
             return None, f"parse failed: {e}"
 

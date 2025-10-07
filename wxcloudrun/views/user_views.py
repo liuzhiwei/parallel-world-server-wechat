@@ -11,7 +11,7 @@ from ..wechat_config import WeChatCloudConfig
 from ..idgeneration import id_gen
 
 # 初始化日志
-logger = logging.getLogger('log')
+logger = logging.getLogger(__name__)
 
 # 创建蓝图
 user_bp = Blueprint('user', __name__, url_prefix='/api')

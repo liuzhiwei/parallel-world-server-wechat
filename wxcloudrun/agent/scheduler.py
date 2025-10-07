@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any
 
-logger = logging.getLogger("log")
+logger = logging.getLogger(__name__)
 
 
 def start_dispatch(event_q: Any, stop_event: Any) -> None:
