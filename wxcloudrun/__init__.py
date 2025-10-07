@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_sock import Sock
-import os, threading
+import os, threading, logging
 
 db = SQLAlchemy()
 sock = Sock()
@@ -9,6 +9,12 @@ sock = Sock()
 def create_app():
 
     app = Flask(__name__)
+    
+    # 配置日志
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
 
     app.config.setdefault('SQLALCHEMY_DATABASE_URI',
                           os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///data.db'))

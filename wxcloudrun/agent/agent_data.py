@@ -139,12 +139,11 @@ class ThoughtResult:
     def validate(self) -> Optional[str]:
 
         # guidance_list 数量
-        gl = self.turn_args.guidance_list
-        if not (1 <= len(gl)):
-            return f"guidance_list length must be 1..3, got {len(gl)}"
+        if not (1 <= len(self.guidance_list)):
+            return f"guidance_list length must be 1..3, got {len(self.guidance_list)}"
 
         # 每条建议, 例如：回复 1–25 字
-        for i, g in enumerate(gl):
+        for i, g in enumerate(self.guidance_list):
             L = _len_cn(g)
             if not (2 <= L):
                 return f"guidance_list[{i}] length less 2, got {L}: {g!r}, not good guidance"

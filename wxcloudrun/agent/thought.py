@@ -13,18 +13,35 @@ class Thought:
         self.ai_service = DeepSeekV3Service()
 
     def thought(self):
-        messages = [{"role": "user", "content": self.my_prompt()}]
-        api_response = self.ai_service.chat_completion(
-                messages=messages,
-                temperature=0.7,
-                max_tokens=500
-            )
-        response_text = self.ai_service.extract_response_text(api_response)
-        result, err = ThoughtResult.try_from_dict(response_text)
-        if err:
-            logger.error(f"LLM's ThoughtResult validation failed: {err}")
-            return None
-        return result
+        logger.info("=== Thought.thought() 开始执行 ===")
+        try:
+            prompt_content = self.my_prompt()
+            logger.info(f"Prompt 生成完成，长度: {len(prompt_content)} 字符")
+            
+            messages = [{"role": "user", "content": prompt_content}]
+            logger.info("准备调用 AI Service")
+            
+            api_response = self.ai_service.chat_completion(
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=500
+                )
+            logger.info("AI Service 调用完成")
+            
+            response_text = self.ai_service.extract_response_text(api_response)
+            logger.info(f"提取响应文本完成，长度: {len(response_text)} 字符")
+            logger.info(f"响应文本内容: {response_text}")
+            
+            result, err = ThoughtResult.try_from_dict(response_text)
+            if err:
+                logger.error(f"LLM's ThoughtResult validation failed: {err}")
+                return None
+            
+            logger.info("ThoughtResult 解析成功")
+            return result
+        except Exception as e:
+            logger.error(f"Thought.thought() 执行失败: {e}", exc_info=True)
+            raise
 
     def my_prompt(self):
         prompt = Template("""你是旅行对话系统的“Thought 决策器”。你的任务：
