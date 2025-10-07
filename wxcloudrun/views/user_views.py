@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
 from ..wechat_config import WeChatCloudConfig
+from ..idgeneration import id_gen
 
 # 初始化日志
 logger = logging.getLogger('log')
@@ -96,7 +97,7 @@ def save_all_data():
         # 保存分身信息
         avatar = DigitalAvatar(
             user_id=user_id,
-            avatar_id=id.new_name_id(avatar_data['name']),
+            avatar_id=id_gen.new_name_id(avatar_data['name']),
             name=avatar_data['name'],
             description=avatar_data['description'],
             avatar_url=avatar_data['avatar_url'],
@@ -108,7 +109,7 @@ def save_all_data():
         # 保存旅行伙伴信息
         partner = TravelPartner(
             user_id=user_id,
-            partner_id=id.new_name_id(partner_data['partner_name']),
+            partner_id=id_gen.new_name_id(partner_data['partner_name']),
             partner_name=partner_data['partner_name'],
             partner_description=partner_data['partner_description'],
             partner_avatar_url=partner_data['partner_avatar_url'],
@@ -200,12 +201,13 @@ def create_session():
             return make_err_response('user_id is required')
         
         # 生成新的session_id
-        session_id = f"session_{user_id}_{int(time.time())}_{str(uuid.uuid4())[:8]}"
-        
+        session_id = id_gen.new_session_id()
+
         # 创建session记录
         session = ChatSession(
             session_id=session_id,
-            user_id=user_id
+            user_id=user_id,
+            created_at=datetime.now().isoformat()
         )
         
         # 插入数据库
