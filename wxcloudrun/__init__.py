@@ -15,11 +15,7 @@ def create_app():
     # 2) 日志：同时输出到控制台与文件（app.log）
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler(os.path.join(app.instance_path, "app.log"))
-        ],
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     # 3) 数据库

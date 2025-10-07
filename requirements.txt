@@ -12,6 +12,7 @@ requests>=2.32,<3
 flask-sock==0.7.0
 gunicorn>=21.2.0,<22
 
-# ORM（如需数据库）
+# ORM（数据库）
+PyMySQL[rsa]>=1.1,<2
 SQLAlchemy>=2.0,<3
 Flask-SQLAlchemy>=3.1,<4
