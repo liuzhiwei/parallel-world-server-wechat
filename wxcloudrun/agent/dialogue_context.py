@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Dict
-from datetime import datetime
 import logging
-from ..dbops.model import ChatMessages, DigitalAvatar, TravelPartner, TravelSettings, ChatTopics
-from ..dbops.dao import insert_chat_message, get_chat_messages_by_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, get_user_sessions, insert_chat_topic, get_session_topics
+from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatTopics, ChatMessages
+from ..dbops.dao import get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, insert_chat_topic
 from .agent_data import TopicAction
 
 # 配置logging
@@ -22,8 +21,6 @@ class DialogueContext:
 
     def __init__(self, user_id: str):
         self.user_id = user_id
-        # 会话ID
-        self.session_id: str = ""
         # 用户历史
         self.history: List[HistoryItem] = []
         # 用户数据属性
@@ -36,15 +33,12 @@ class DialogueContext:
 
     def build(self):
         """构建用户上下文：加载历史记录和用户数据"""
-
-        # 获取用户最新的session_id
-        self.load_latest_session_id()
         
-        # 加载话题历史
-        self.load_session_topics()
+        # 从数据库加载最近的10条对话历史
+        self.load_recent_history_from_db(limit=10)
         
-        if not self.history:  # 如果history为空
-            self.load_history_from_db(limit=10)
+        # 从数据库加载最近的10个话题
+        self.load_recent_topics_from_db(limit=10)
         
         # 从数据库加载用户相关数据
         try:
@@ -59,46 +53,65 @@ class DialogueContext:
         except Exception as e:
             logger.error(f"加载用户数据失败: {e}")
     
-    def load_latest_session_id(self):
-        """从数据库加载用户最新的session_id"""
+    def load_recent_history_from_db(self, limit: int = 10):
+        """从ChatMessages表加载最近的对话历史"""
         try:
-            # 获取用户最近的session列表
-            sessions = get_user_sessions(self.user_id, limit=1)
-            if sessions and len(sessions) > 0:
-                self.session_id = sessions[0].session_id
-                logger.info(f"加载最新session_id: {self.session_id}")
-            else:
-                logger.warning(f"用户 {self.user_id} 没有找到任何session")
+            # 查询最近的消息
+            recent_messages = ChatMessages.query.filter(
+                ChatMessages.user_id == self.user_id
+            ).order_by(ChatMessages.created_at.desc()).limit(limit).all()
+            
+            # 反转顺序（从旧到新）
+            recent_messages.reverse()
+            
+            # 转换为HistoryItem并添加到内存
+            for msg in recent_messages:
+                history_item = HistoryItem(
+                    speaker_id=msg.speaker_id,
+                    speaker_type=msg.speaker_type,
+                    message_id=msg.message_id,
+                    message_content=msg.message
+                )
+                self.history.append(history_item)
+            
+            logger.info(f"从数据库加载了 {len(recent_messages)} 条对话历史")
         except Exception as e:
-            logger.error(f"加载最新session_id失败: {e}")
+            logger.error(f"从数据库加载对话历史失败: {e}")
     
-    def load_session_topics(self):
-        """加载当前session的所有topics，按destination分组"""
+    def load_recent_topics_from_db(self, limit: int = 10):
+        """从ChatTopics表加载最近的话题"""
         try:
-            # 获取按destination分组的topics
-            self.topic_history = get_session_topics(self.session_id)
-            # 获取最新的topic作为当前topic
-            if self.topic_history:
-                # 获取最新的topic（第一个destination的第一个topic）
-                latest_destination = list(self.topic_history.keys())[0] if self.topic_history else None
-                if latest_destination and self.topic_history[latest_destination]:
-                    self.current_topic = self.topic_history[latest_destination][0]  # 最新的topic内容
-                    logger.info(f"加载session topics，共{len(self.topic_history)}个destination，当前topic: {self.current_topic}")
-                else:
-                    self.current_topic = None
-                    logger.info(f"session {self.session_id} 没有找到任何topic内容")
-            else:
-                self.current_topic = None
-                logger.info(f"session {self.session_id} 没有找到任何topics")
+            # 查询最近的话题
+            recent_topics = ChatTopics.query.filter(
+                ChatTopics.user_id == self.user_id
+            ).order_by(ChatTopics.created_at.desc()).limit(limit).all()
+            
+            if not recent_topics:
+                logger.info("未找到任何话题记录")
+                return
+            
+            # 最新的作为current_topic
+            latest_topic = recent_topics[0]
+            self.current_topic = latest_topic.topic
+            
+            # 其余的按destination分组到topic_history
+            for topic_record in recent_topics:
+                destination = topic_record.destination or "未分类"
+                if destination not in self.topic_history:
+                    self.topic_history[destination] = []
+                # 避免重复添加
+                if topic_record.topic not in self.topic_history[destination]:
+                    self.topic_history[destination].append(topic_record.topic)
+            
+            logger.info(f"从数据库加载了 {len(recent_topics)} 个话题，当前话题: {self.current_topic}")
         except Exception as e:
-            logger.error(f"加载session topics失败: {e}")
+            logger.error(f"从数据库加载话题失败: {e}")
     
     def create_new_topic(self, topic_text: str, destination: str = None):
         """创建新的topic"""
         try:
             new_topic = ChatTopics(
                 user_id=self.user_id,
-                session_id=self.session_id,
                 destination=destination,
                 topic=topic_text,
             )
@@ -152,18 +165,15 @@ class DialogueContext:
                 destination = self.travel_settings.destination if self.travel_settings else "未分类"
                 self.create_new_topic(new_topic_info.title, destination)
 
-        # 添加一条历史记录：先插入数据库，再更新内存
+        # 添加一条历史记录：仅保存到内存
         try:
             # 从输入对象提取数据
-            session_id = self.session_id
             speaker_id = speak_result["speaker_id"]
             speaker_type = speak_result["speaker_type"]
             message_id = speak_result.get("message_id")
             message_content = speak_result.get("text")
             
             # 检查必要字段
-            if not session_id:
-                raise ValueError("session_id is required")
             if not speaker_id:
                 raise ValueError("speaker_id is required")
             if not speaker_type:
@@ -173,19 +183,6 @@ class DialogueContext:
             if not message_content:
                 raise ValueError("message_content is required")
 
-            # 创建数据库记录
-            chat_message = ChatMessages(
-                user_id=self.user_id,
-                session_id=session_id,
-                speaker_id=speaker_id,
-                speaker_type=speaker_type,
-                message_id=message_id,
-                message=message_content,
-            )
-            
-            # 插入数据库
-            insert_chat_message(chat_message)
-            
             # 创建内存历史记录
             history_item = HistoryItem(
                 speaker_id=speaker_id,
@@ -198,39 +195,13 @@ class DialogueContext:
             self.history.append(history_item)
             
         except Exception as e:
-            # 如果数据库插入失败，仍然保存到内存
-            logger.error(f"数据库插入失败，仅保存到内存: {e}")
-            history_item = HistoryItem(
-                speaker_id=speaker_id,
-                speaker_type=speaker_type,
-                message_id=message_id,
-                message_content=message_content,
-            )
-            self.history.append(history_item)
+            logger.error(f"添加历史记录失败: {e}")
         
     
     def get_recent_history(self, count: int = 5) -> List[HistoryItem]:
         """获取最近的几条历史记录"""
         return self.history[-count:] if count > 0 else self.history
     
-    def load_history_from_db(self, session_id: str = "", limit: int = 50):
-        """从数据库加载历史记录到内存（仅在history为空时加载）"""
-        try:
-            # 从数据库获取消息
-            db_messages = get_chat_messages_by_session(self.user_id, session_id, limit)
-            
-            # 将数据库记录转换为HistoryItem并添加到内存
-            for msg in db_messages:
-                history_item = HistoryItem(
-                    speaker_id=msg.speaker_id,
-                    speaker_type=msg.speaker_type,
-                    message_id=msg.message_id,
-                    message_content=msg.message,
-                )
-                self.history.append(history_item)
-                
-        except Exception as e:
-            logger.error(f"从数据库加载历史记录失败: {e}")
     
     def get_avatar_name(self) -> str:
         """获取数字分身名称"""
@@ -268,6 +239,3 @@ class DialogueContext:
             self.travel_settings is not None
         )
     
-    def get_current_session_id(self) -> str:
-        """获取当前会话ID"""
-        return self.session_id

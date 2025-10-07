@@ -61,7 +61,6 @@ def test_thought():
                 'thought_result': result_dict,
                 'context': {
                     'user_id': context.user_id,
-                    'session_id': context.session_id,
                     'current_topic': context.current_topic,
                     'avatar_name': context.get_avatar_name(),
                     'partner_name': context.get_partner_name(),
@@ -107,7 +106,6 @@ def test_context():
             'code': 0,
             'data': {
                 'user_id': context.user_id,
-                'session_id': context.session_id,
                 'current_topic': context.current_topic,
                 'topic_history': context.topic_history,
                 'avatar': {
