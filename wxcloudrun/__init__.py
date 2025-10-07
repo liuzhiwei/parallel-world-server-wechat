@@ -1,7 +1,8 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_sock import Sock
-import os, threading, logging, sys
+import os, threading, logging
+import pymysql
 
 db = SQLAlchemy()
 sock = Sock()
@@ -19,6 +20,8 @@ def create_app():
     )
 
     # 3) 数据库
+    # 因MySQLDB不支持Python3，使用pymysql扩展库代替MySQLDB库
+    pymysql.install_as_MySQLdb()
     # 读取数据库环境变量
     db_username = os.environ.get("MYSQL_USERNAME", 'root')
     db_password = os.environ.get("MYSQL_PASSWORD", 'root')
