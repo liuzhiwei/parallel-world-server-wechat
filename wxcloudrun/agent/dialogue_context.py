@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Dict
 import logging
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatTopics, ChatMessages
-from ..dbops.dao import get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, insert_chat_topic
+from ..dbops.dao import insert_chat_topic
 from .agent_data import TopicAction
 
 # 配置logging
@@ -40,18 +40,14 @@ class DialogueContext:
         # 从数据库加载最近的10个话题
         self.load_recent_topics_from_db(limit=10)
         
-        # 从数据库加载用户相关数据
-        try:
-            # 加载数字分身数据
-            self.digital_avatar = get_digital_avatar_by_user_id(self.user_id)
-            
-            # 加载旅行伙伴数据
-            self.travel_partner = get_travel_partner_by_user_id(self.user_id)
-            
-            # 加载旅行设置数据
-            self.travel_settings = get_travel_settings_by_user_id(self.user_id)
-        except Exception as e:
-            logger.error(f"加载用户数据失败: {e}")
+        # 从数据库加载个人分身
+        self.load_digital_avatar_from_db()
+
+        # 从数据库加载旅行伙伴
+        self.load_travel_partner_from_db()
+
+        # 从数据库加载旅行目的地
+        self.load_travel_settings_from_db()
     
     def load_recent_history_from_db(self, limit: int = 10):
         """从ChatMessages表加载最近的对话历史"""
@@ -106,6 +102,42 @@ class DialogueContext:
             logger.info(f"从数据库加载了 {len(recent_topics)} 个话题，当前话题: {self.current_topic}")
         except Exception as e:
             logger.error(f"从数据库加载话题失败: {e}")
+
+    def load_digital_avatar_from_db(self):
+        """从数据库加载用户个人资料数据"""
+        try:
+            # 加载数字分身数据（获取最近一条）
+            self.digital_avatar = DigitalAvatar.query.filter(
+                DigitalAvatar.user_id == self.user_id
+            ).order_by(DigitalAvatar.created_at.desc()).first()
+            
+            logger.info(f"成功加载用户资料")
+        except Exception as e:
+            logger.error(f"加载用户数据失败: {e}")
+    
+    def load_travel_partner_from_db(self):
+        """从数据库加载用户个人资料数据"""
+        try:
+            # 加载旅行伙伴数据（获取最近一条）
+            self.travel_partner = TravelPartner.query.filter(
+                TravelPartner.user_id == self.user_id
+            ).order_by(TravelPartner.created_at.desc()).first()
+            
+            logger.info(f"成功加载用户资料")
+        except Exception as e:
+            logger.error(f"加载用户数据失败: {e}")
+
+    def load_travel_settings_from_db(self):
+        """从数据库加载用户个人资料数据"""
+        try:
+            # 加载旅行设置数据（获取最近一条）
+            self.travel_settings = TravelSettings.query.filter(
+                TravelSettings.user_id == self.user_id
+            ).order_by(TravelSettings.created_at.desc()).first()
+            
+            logger.info(f"成功加载用户资料")
+        except Exception as e:
+            logger.error(f"加载用户数据失败: {e}")
     
     def create_new_topic(self, topic_text: str, destination: str = None):
         """创建新的topic"""

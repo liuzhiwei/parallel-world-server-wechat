@@ -1,6 +1,5 @@
 from flask import Blueprint, request, jsonify
 import logging
-from ..agent.thought import Thought
 from ..agent.dialogue_context import DialogueContext
 
 logger = logging.getLogger(__name__)
@@ -9,10 +8,10 @@ logger = logging.getLogger(__name__)
 test_bp = Blueprint('test', __name__, url_prefix='/test')
 
 
-@test_bp.route('/thought', methods=['POST'])
-def test_thought():
+@test_bp.route('/step', methods=['POST'])
+def test_step():
     """
-    测试 Thought 类的 thought 方法
+    测试 DialogueController 的 step 方法
     
     请求体示例:
     {
@@ -23,7 +22,7 @@ def test_thought():
     {
         "code": 0,
         "data": {
-            "thought_result": {...},
+            "reply": {...},
             "context": {...}
         }
     }
@@ -38,40 +37,42 @@ def test_thought():
                 'errorMsg': 'user_id is required'
             }), 400
         
-        # 创建或获取对话上下文
-        context = DialogueContext(user_id)
-        context.build()
+        # 创建 DialogueController 实例
+        from ..agent.dialogue_controller import DialogueController
+        controller = DialogueController()
         
-        # 创建 Thought 实例并执行
-        thought = Thought(context)
-        thought_result = thought.thought()
+        # 执行 step 方法
+        reply = controller.step(user_id)
         
-        if thought_result is None:
+        if reply is None:
             return jsonify({
                 'code': -1,
-                'errorMsg': 'Thought execution failed, check logs for details'
+                'errorMsg': 'Step execution failed, check logs for details'
             }), 500
         
-        # 转换为字典返回
-        result_dict = thought_result.to_dict() if hasattr(thought_result, 'to_dict') else str(thought_result)
+        # 获取上下文信息用于调试
+        context = controller.user_context.get(user_id)
+        context_info = {}
+        if context:
+            context_info = {
+                'user_id': context.user_id,
+                'current_topic': context.current_topic,
+                'avatar_name': context.get_avatar_name(),
+                'partner_name': context.get_partner_name(),
+                'destination': context.get_travel_destination(),
+                'history_count': len(context.history)
+            }
         
         return jsonify({
             'code': 0,
             'data': {
-                'thought_result': result_dict,
-                'context': {
-                    'user_id': context.user_id,
-                    'current_topic': context.current_topic,
-                    'avatar_name': context.get_avatar_name(),
-                    'partner_name': context.get_partner_name(),
-                    'destination': context.get_travel_destination(),
-                    'history_count': len(context.history)
-                }
+                'reply': reply,
+                'context': context_info
             }
         })
         
     except Exception as e:
-        logger.error(f"Test thought failed: {e}", exc_info=True)
+        logger.error(f"Test step failed: {e}", exc_info=True)
         return jsonify({
             'code': -1,
             'errorMsg': f'Test failed: {str(e)}'

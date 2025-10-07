@@ -37,7 +37,6 @@ class DialogueController:
         # 构建回复消息
         reply = {
             "user_id": user_id,
-            "session_id": self.user_context[user_id].session_id,
             "agent_info": {
                 "agent_id": speak_result["speaker_id"],
                 "agent_type": speak_result["speaker_type"],
