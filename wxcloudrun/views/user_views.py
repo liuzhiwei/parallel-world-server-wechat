@@ -1,7 +1,6 @@
 from datetime import datetime
 import os
 import uuid
-import time
 import logging
 import json
 from flask import request, Blueprint, Response
