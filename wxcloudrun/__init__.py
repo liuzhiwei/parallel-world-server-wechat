@@ -20,11 +20,13 @@ def create_app():
     from .views.api import register_api_routes
     from .views.websocket import register_websocket_routes, get_event_queue
     from .views.user_views import user_bp
+    from .views.test_views import test_bp
     from .agent.scheduler import start_dispatch
 
     register_api_routes(app)
     register_websocket_routes(app, sock)
     app.register_blueprint(user_bp)
+    app.register_blueprint(test_bp)
 
     # 自动创建数据库表
     with app.app_context():
