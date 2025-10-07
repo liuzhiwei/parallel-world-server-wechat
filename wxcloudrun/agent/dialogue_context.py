@@ -1,10 +1,10 @@
-
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 from datetime import datetime
 import logging
 from ..dbops.model import ChatMessages, DigitalAvatar, TravelPartner, TravelSettings, ChatTopics
 from ..dbops.dao import insert_chat_message, get_chat_messages_by_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id, get_user_sessions, insert_chat_topic, get_session_topics
+from .agent_data import TopicAction
 
 # 配置logging
 logger = logging.getLogger(__name__)
@@ -147,10 +147,12 @@ class DialogueContext:
     
     def update(self, thought_result, speak_result):
         # 处理topic变更
-        if hasattr(thought_result, 'topic_action') and thought_result.topic_action == "END_AND_GENERATE":
-            if hasattr(thought_result, 'topic_args') and hasattr(thought_result.topic_args, 'new_topic'):
+        if thought_result.topic_action == TopicAction.END_AND_GENERATE:
+            if thought_result.topic_args and thought_result.topic_args.new_topic:
                 new_topic_info = thought_result.topic_args.new_topic
-                self.user_context[self.user_id].create_new_topic(new_topic_info.title)
+                # 获取destination，优先使用travel_settings中的destination
+                destination = self.travel_settings.destination if self.travel_settings else "未分类"
+                self.create_new_topic(new_topic_info.title, destination)
 
         # 添加一条历史记录：先插入数据库，再更新内存
         try:
@@ -256,7 +258,7 @@ class DialogueContext:
     
     def get_travel_destination(self) -> str:
         """获取旅行目的地"""
-        return self.destination or "未设置目的地"
+        return self.travel_settings.destination if self.travel_settings else "未设置目的地"
     
     def get_travel_days(self) -> int:
         """获取旅行天数"""

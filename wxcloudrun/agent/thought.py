@@ -1,6 +1,9 @@
-
 from ..llm.ai_service import DeepSeekV3Service
 from string import Template
+from .agent_data import ThoughtResult
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Thought:
@@ -17,7 +20,11 @@ class Thought:
                 max_tokens=500
             )
         response_text = self.ai_service.extract_response_text(api_response)
-        return response_text
+        result, err = ThoughtResult.try_from_dict(response_text)
+        if err:
+            logger.error(f"LLM's ThoughtResult validation failed: {err}")
+            return None
+        return result
 
     def my_prompt(self):
         prompt = Template("""你是旅行对话系统的“Thought 决策器”。你的任务：
@@ -54,13 +61,13 @@ F. 首次无话题：
 
 【生成要求】
 - 仅输出合法 JSON（见下方 schema），不得附加多余文本或思维过程。
-- turn_args.guidance_list：长度 1–3；每条是该条发言的小目标，并在文本中明确提醒“每条1–25字（含标点）”，示例：“1–25字，给两种到达时间并标首选”。
+- guidance_list：长度 1–3；每条是接下来发言人的小目标，示例：“每条1–25字（含标点）”、“推进主题”、“高质量的回复”。不要限定内容，更多是提示或建议。
 - 若生成新话题：new_topic.title 清晰具体；rationale ≤40字说明“为何现在切换”。
 
 【输出格式】
 {
-  "turn_action": "SPEAK_PERSONA | SPEAK_PARTNER",
-  "turn_args": { "speaker": "...", "guidance_list": ["...", "..."] },
+  "turn_action": "SPEAK_USER_DIGITAL_AVATAR | SPEAK_TRAVEL_PARTNER",
+  "guidance_list": ["...", "..."],
   "topic_action": "INIT_AND_GENERATE | CONTINUE_TOPIC | END_AND_GENERATE",
   "topic_args": { "topic": "... or null", "new_topic": { "title": "...", "rationale": "...", "confidence": 0.0 } or null },
   "confidence": 0.0,

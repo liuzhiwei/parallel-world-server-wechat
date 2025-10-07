@@ -1,8 +1,9 @@
 
 from ..llm.ai_service import DeepSeekV3Service
 from .dialogue_context import DialogueContext
-from .thought import ThoughtResult
+from .agent_data import ThoughtResult
 from string import Template
+import json
 
 
 class DigitalAvatar:
@@ -10,7 +11,7 @@ class DigitalAvatar:
     def __init__(self):
         self.ai_service = DeepSeekV3Service()
 
-    def speak(self, context: DialogueContext, thought_result: ThoughtResult):
+    def speak(self, context: DialogueContext, thought_result: ThoughtResult) -> str:
         messages = [{"role": "user", "content": self.my_prompt(context, thought_result)}]
         api_response = self.ai_service.chat_completion(
                 messages=messages,
@@ -18,7 +19,9 @@ class DigitalAvatar:
                 max_tokens=500
             )
         response_text = self.ai_service.extract_response_text(api_response)
-        return response_text
+        obj = json.loads(response_text)   # -> dict
+        return obj.get("text")            # 取出字段
+
 
     def my_prompt(self, context: DialogueContext, thought_result: ThoughtResult):
         digital_avata_name = context.digital_avatar.name if context.digital_avatar else "未知分身"
@@ -27,9 +30,15 @@ class DigitalAvatar:
         destination = context.travel_settings.destination if context.travel_settings else "未知目的地"
         partner_description = context.travel_partner.partner_description if context.travel_partner else "暂无描述"
         history_snippet = str(context.get_recent_history(5))
-        topic = thought_result.topic_args.new_topic.title if thought_result.topic_args and thought_result.topic_args.new_topic else "未设置话题"
+        # 优先使用当前话题，如果有新话题则使用新话题标题
+        if thought_result.topic_args and thought_result.topic_args.new_topic:
+            topic = thought_result.topic_args.new_topic.title
+        elif thought_result.topic_args and thought_result.topic_args.topic:
+            topic = thought_result.topic_args.topic
+        else:
+            topic = "未设置话题"
         # 将markdown格式的guidance_list转换为字符串
-        guidance_list = thought_result.turn_args.guidance_list if thought_result.turn_args else []
+        guidance_list = thought_result.guidance_list
         if isinstance(guidance_list, list):
             guidance = '\n'.join([f"- {item}" for item in guidance_list])
         else:

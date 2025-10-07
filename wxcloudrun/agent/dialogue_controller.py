@@ -1,5 +1,3 @@
-
-
 from typing import Dict
 import time
 import logging
@@ -8,6 +6,7 @@ from wxcloudrun.agent.thought import Thought
 from .dialogue_context import DialogueContext
 from .digital_avatar import DigitalAvatar
 from .digital_partner import DigitalPartner
+from .agent_data import TurnAction
 from ..idgeneration.id_gen import new_message_id
 
 logger = logging.getLogger("log")
@@ -76,7 +75,7 @@ class DialogueController:
     def act(self, user_id: str, thought_result):
         speak_result = {}
 
-        if thought_result.turn_action == "SPEAK_USER_AVATAR":
+        if thought_result.turn_action == TurnAction.SPEAK_USER_DIGITAL_AVATAR:
             avatar = DigitalAvatar()
             speak_text = avatar.speak(self.user_context[user_id], thought_result)
             speak_result = {"text": speak_text}
@@ -84,7 +83,7 @@ class DialogueController:
             speak_result["speaker_type"] = "avatar"
             speak_result["agent_name"] = self.user_context[user_id].digital_avatar.name
             speak_result["agent_photo_url"] = self.user_context[user_id].digital_avatar.avatar_url
-        elif thought_result.turn_action == "SPEAK_PARTNER":
+        elif thought_result.turn_action == TurnAction.SPEAK_TRAVEL_PARTNER:
             partner = DigitalPartner()
             speak_text = partner.speak(self.user_context[user_id], thought_result)
             speak_result = {"text": speak_text}
