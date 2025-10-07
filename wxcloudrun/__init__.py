@@ -26,6 +26,11 @@ def create_app():
     register_websocket_routes(app, sock)
     app.register_blueprint(user_bp)
 
+    # 自动创建数据库表
+    with app.app_context():
+        from .dbops import model  # 导入所有模型
+        db.create_all()
+
     # 在应用上下文里启动后台线程（关键！）
     def _run_dispatch_in_ctx(q, stop_event):
         with app.app_context():

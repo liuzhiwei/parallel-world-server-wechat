@@ -28,24 +28,24 @@ class Thought:
 
     def my_prompt(self):
         prompt = Template("""你是旅行对话系统的“Thought 决策器”。你的任务：
-(1) 决定下一位发言者（数字分身 $user_digital_avatar_name 或 旅行伙伴 $partner_name），必要时让其连续多条自然表达（1–3 条）。
+(1) 决定下一位发言者（数字分身 ${user_digital_avatar_name} 或 旅行伙伴 ${partner_name}），必要时让其连续多条自然表达（1–3 条）。
 (2) 关于话题（topic）：
    - 若当前话题为空（首次），请生成第一个话题；
    - 若不为空，依据历史与当前对话，判断继续当前话题或收尾并生成新话题。
 
 【上下文】
-- 数字分身：$user_digital_avatar_name
-  描述：$user_digital_avatar_description
+- 数字分身：${user_digital_avatar_name}
+  描述：${user_digital_avatar_description}
   （说明：description 可包含性格、口吻、习惯、家乡、职业/公司、兴趣偏好、预算倾向、出行习惯等。仅用于理解，不要复述。）
-- 旅行伙伴：$partner_name
-  描述：$partner_description
+- 旅行伙伴：${partner_name}
+  描述：${partner_description}
    （说明：description 可包含性格、口吻、习惯、家乡、职业/公司、兴趣偏好、预算倾向、出行习惯等。仅用于理解，不要复述。）
-- 目的地：$destination
+- 目的地：${destination}
 - 历史话题（按目的地分组，供避免重复）：
-$topic_history
-- 当前话题：$current_topic  // 可能为 null
-- 最近对话（升序，最多 $history_window 条）：
-$history$
+${topic_history}
+- 当前话题：${current_topic}  // 可能为 null
+- 最近对话（升序，最多 ${history_window} 条）：
+${history}
 
 【决策准则（自然表达优先）】
 A. 自然完成度：若某人正“展开完整意思/列举选项/补充细节/自我纠正”，允许同一人连续发言（1–3 条），直到段落自然结束。
@@ -56,7 +56,7 @@ E. 话题充分度：
    - 若已达成共识/信息饱和/重复度高/存在自然过渡点 → END_AND_GENERATE，并生成一个紧接需求、可执行的新话题（例：“首日路线与到达时间”“住宿与预算取舍”“摄影与人少路线”“晚餐与夜景路线”）。
    - 否则 → CONTINUE_TOPIC。
 F. 首次无话题：
-   - 选择最自然的切入点作为首个话题（如"为什么去 $destination（动机/期待）""首日路线与到达时间"），避免与 $topic_history 重复。
+   - 选择最自然的切入点作为首个话题（如"为什么去 ${destination}（动机/期待）""首日路线与到达时间"），避免与 ${topic_history} 重复。
    - 题名简短明确、行动导向。
 
 【生成要求】
