@@ -206,7 +206,7 @@ def create_session():
 
         # 将用户添加到轮询队列
         alive_chat_users = current_app.extensions["alive_chat_users"]
-        alive_chat_users.add(user_id)
+        alive_chat_users.add(user_id, session_id)
         
         return make_succ_response({
             'session_id': session_id

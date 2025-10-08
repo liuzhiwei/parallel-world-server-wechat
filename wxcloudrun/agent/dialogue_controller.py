@@ -17,10 +17,10 @@ class DialogueController:
         self.user_context: Dict[str, DialogueContext] = {}
 
 
-    def step(self, user_id: str):
+    def step(self, user_id: str, session_id: str):
         
         # 构建完整的用户上下文
-        self.build_user_context(user_id)
+        self.build_user_context(user_id, session_id)
         
         # 思考
         thought_result = self.thought(user_id)
@@ -67,10 +67,10 @@ class DialogueController:
 
         return reply
 
-    def build_user_context(self, user_id: str):
+    def build_user_context(self, user_id: str, session_id: str):
         """从字典中获取context实例，如果没有则创建一个"""
         if user_id not in self.user_context:
-            self.user_context[user_id] = DialogueContext(user_id)
+            self.user_context[user_id] = DialogueContext(user_id, session_id)
             self.user_context[user_id].build()
         
         return self.user_context[user_id]

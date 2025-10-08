@@ -23,15 +23,15 @@ def start_dispatch(stop_event: Any) -> None:
     while not getattr(stop_event, "is_set", lambda: False)():
         # 获取轮询队列
         alive_chat_users = current_app.extensions["alive_chat_users"]
-        user_id = alive_chat_users.next()   # 空则阻塞
+        user_id, session_id = alive_chat_users.next()   # 空则阻塞
 
-        if not user_id:
-            logger.warning("[DISPATCH] event without user_id: %s", user_id)
+        if not user_id or not session_id:
+            logger.warning("[DISPATCH] event without user_id: %s, session_id: %s", user_id, session_id)
             continue
 
         # 生成回复
         try:
-            reply = controller.step(user_id)
+            reply = controller.step(user_id, session_id)
         except Exception as e:
             logger.error("[DISPATCH] error generating reply for user %s: %s", user_id, e)
             # 生成回复失败时移除用户，避免无限重试

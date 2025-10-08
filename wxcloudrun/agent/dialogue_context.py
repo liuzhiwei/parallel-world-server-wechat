@@ -19,8 +19,9 @@ class HistoryItem:
 
 class DialogueContext:
 
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str, session_id: str):
         self.user_id = user_id
+        self.session_id = session_id
         # 用户历史
         self.history: List[HistoryItem] = []
         # 用户数据属性
@@ -214,6 +215,7 @@ class DialogueContext:
         try:
             new_topic = ChatTopics(
                 user_id=self.user_id,
+                session_id=self.session_id,
                 destination=destination,
                 topic=topic_text,
             )
