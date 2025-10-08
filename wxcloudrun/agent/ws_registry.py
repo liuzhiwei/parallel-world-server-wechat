@@ -15,19 +15,19 @@ class WsRegistry:
         # value: (ws, updated_at, version)
         self._close_old_ws = close_old_ws
 
-    def upsert(self, user_id, ws):
+    def upsert(self, user: Hashable, ws: Any) -> int:
+        """设置/替换用户连接，返回新的 version（递增）"""
         old_ws = None
         with self._lock:
-            if user_id in self._map:
-                old_ws, ver = self._map[user_id]
+            if user in self._map:
+                old_ws, _, ver = self._map[user]
                 ver += 1
             else:
                 ver = 1
-            self._map[user_id] = (ws, ver)
-        # 锁外关闭旧连接（若与新不同）
-        if old_ws is not None and old_ws is not ws:
+            self._map[user] = (ws, time.time(), ver)
+        if self._close_old_ws and old_ws and old_ws is not ws:
             try:
-                old_ws.close()   # 直接关闭即可
+                old_ws.close()
             except Exception:
                 pass
         return ver
@@ -48,10 +48,25 @@ class WsRegistry:
             cur = self._map.get(user)
             if not cur:
                 return
-            cur_ws, _, _ = cur
+            
+            # 防御性代码：检查数据格式
+            try:
+                if len(cur) == 3:
+                    cur_ws, _, _ = cur
+                elif len(cur) == 2:
+                    cur_ws, _ = cur
+                else:
+                    # 数据格式异常，直接删除
+                    self._map.pop(user, None)
+                    return
+            except (ValueError, TypeError):
+                # 解包失败，直接删除
+                self._map.pop(user, None)
+                return
+                
             if (ws is None) or (ws is cur_ws):
                 self._map.pop(user, None)
-                ws.close()
+                # 由调用方决定是否 close(ws)
 
     def snapshot(self) -> Dict[Hashable, Any]:
         """返回 {user: ws} 的浅拷贝（仅用于观察/调试/UI）"""
