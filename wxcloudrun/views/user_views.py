@@ -4,7 +4,7 @@ import logging
 import json
 from flask import request, Blueprint, Response
 from werkzeug.utils import secure_filename
-from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session
+from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
 from ..wechat_config import WeChatCloudConfig
 from ..idgeneration import id_gen
@@ -210,6 +210,46 @@ def create_session():
         
     except Exception as e:
         return make_err_response(f'创建会话失败: {str(e)}')
+
+
+@user_bp.route('/user-profile', methods=['GET'])
+def get_user_profile():
+    """获取用户完整资料"""
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return make_err_response('用户ID不能为空')
+        
+        # 获取用户资料
+        avatar = get_digital_avatar_by_user_id(user_id)
+        partner = get_travel_partner_by_user_id(user_id)
+        settings = get_travel_settings_by_user_id(user_id)
+        
+        # 构建返回数据
+        profile = {
+            'avatar': {
+                'name': avatar.name if avatar else None,
+                'description': avatar.description if avatar else None,
+                'avatar_url': avatar.avatar_url if avatar else None
+            } if avatar else None,
+            'partner': {
+                'partner_name': partner.partner_name if partner else None,
+                'partner_description': partner.partner_description if partner else None,
+                'partner_avatar_url': partner.partner_avatar_url if partner else None
+            } if partner else None,
+            'settings': {
+                'destination': settings.destination if settings else None,
+                'days': settings.days if settings else None,
+                'preference': settings.preference if settings else None
+            } if settings else None
+        }
+        
+        return make_succ_response(profile)
+        
+    except Exception as e:
+        logger.error(f"获取用户资料失败: {e}", exc_info=True)
+        return make_err_response(f'获取用户资料失败: {str(e)}')
 
 # 移除与 WebSocket 直连相关的辅助接口（已改为队列驱动）
 
