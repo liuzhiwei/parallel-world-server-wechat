@@ -1,22 +1,25 @@
 FROM alpine:3.18
 
-# 使用 3.18 的腾讯云镜像（HTTPS）
+# 使用腾讯云镜像
 RUN printf "https://mirrors.tencent.com/alpine/v3.18/main\nhttps://mirrors.tencent.com/alpine/v3.18/community\n" > /etc/apk/repositories
 
-# python + pip + 证书
+# 运行时 + 构建依赖（gevent/greenlet 在 musl 上常需编译）
 RUN apk add --no-cache python3 py3-pip ca-certificates \
-    && python3 -m ensurepip \
-    && pip3 install --no-cache-dir --upgrade pip \
-         -i https://mirrors.cloud.tencent.com/pypi/simple --trusted-host mirrors.cloud.tencent.com
+    && apk add --no-cache --virtual .build-deps \
+         build-base python3-dev musl-dev libffi-dev
 
 WORKDIR /app
 COPY . /app
 
-# 安装依赖（与 requirements.txt 保持一致；显式指定镜像）
-RUN pip3 install --no-cache-dir -r requirements.txt \
-        -i https://mirrors.cloud.tencent.com/pypi/simple --trusted-host mirrors.cloud.tencent.com
+# pip 源与安装
+RUN python3 -m ensurepip \
+ && pip3 install --no-cache-dir --upgrade pip \
+      -i https://mirrors.cloud.tencent.com/pypi/simple --trusted-host mirrors.cloud.tencent.com \
+ && pip3 install --no-cache-dir -r requirements.txt \
+      -i https://mirrors.cloud.tencent.com/pypi/simple --trusted-host mirrors.cloud.tencent.com \
+ && apk del .build-deps
 
 EXPOSE 80
 
-# 用 shell 展开 PORT，兼容云托管端口注入；Gunicorn 生产可用
-CMD ["sh", "-c", "gunicorn -b 0.0.0.0:${PORT:-80} run:app"]
+# gevent-websocket worker + 禁用超时 + 合理 keep-alive；单 worker 保障进程内注册表一致
+CMD ["sh", "-c", "gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 -t 0 --keep-alive 75 -b 0.0.0.0:${PORT:-80} run:app"]

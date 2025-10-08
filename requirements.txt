@@ -11,6 +11,9 @@ requests>=2.32,<3
 # WebSocket
 flask-sock==0.7.0
 gunicorn>=21.2.0,<22
+gevent==24.2.1
+greenlet>=3.0.0
+gevent-websocket==0.10.1
 
 # ORM（数据库）
 PyMySQL[rsa]>=1.1,<2
