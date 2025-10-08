@@ -57,10 +57,10 @@ class DialogueController:
                 "agent_photo_url": speak_result["agent_photo_url"]
             },
             "contents": [{
-                "message_id": f"msg_{user_id}_{int(time.time())}",
+                "message_id": speak_result["message_id"],
+                "text": speak_result["text"],
                 "type": "text",
                 "mime": "text/plain; charset=utf-8",
-                "text": speak_result["text"],
                 "lang": "zh-CN"
             }]
         }

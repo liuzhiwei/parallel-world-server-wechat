@@ -38,7 +38,6 @@ def register_websocket_routes(app, sock):
 
         # 2) 轻量接收线程：处理心跳/指令（不阻塞主线程）
         stop_flag = {"stop": False}
-
         def recv_loop():
             while not stop_flag["stop"]:
                 try:
@@ -60,7 +59,6 @@ def register_websocket_routes(app, sock):
                 except Exception:
                     # 超时/对端断开/网络异常都会到这里 -> 退出接收线程
                     break
-
         threading.Thread(target=recv_loop, daemon=True).start()
 
         # 3) 驻留主循环：保持路由活着；轻量保活
