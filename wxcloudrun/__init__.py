@@ -118,7 +118,7 @@ def create_app():
     app.dispatcher_stop = threading.Event()
     threading.Thread(
         target=_run_dispatch_in_ctx,
-        args=(app.dispatcher_stop),
+        args=(app.dispatcher_stop,),
         daemon=True
     ).start()
 
