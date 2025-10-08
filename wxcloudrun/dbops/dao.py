@@ -1,6 +1,8 @@
 import logging
+import time
+from functools import wraps
 
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, DisconnectionError
 
 from wxcloudrun import db
 from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSettings, ChatMessages, ChatSession, ChatTopics
@@ -9,7 +11,29 @@ from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSe
 logger = logging.getLogger(__name__)
 
 
+def retry_db_operation(max_retries=3, delay=1):
+    """数据库操作重试装饰器"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (OperationalError, DisconnectionError) as e:
+                    if attempt == max_retries - 1:
+                        logger.error(f"Database operation failed after {max_retries} attempts: {e}")
+                        raise
+                    logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    time.sleep(delay * (attempt + 1))  # 递增延迟
+                    # 重新创建数据库会话
+                    db.session.rollback()
+            return None
+        return wrapper
+    return decorator
+
+
 # 用户相关DAO函数
+@retry_db_operation(max_retries=3, delay=1)
 def insert_user(user):
     """
     插入用户实体
@@ -23,6 +47,7 @@ def insert_user(user):
         raise e
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_user_by_user_id(user_id):
     """
     根据用户ID获取用户
@@ -48,6 +73,7 @@ def ensure_user_exists(user_id):
 
 
 # 数字分身相关DAO函数
+@retry_db_operation(max_retries=3, delay=1)
 def insert_digital_avatar(avatar):
     """
     插入数字分身实体
@@ -57,6 +83,7 @@ def insert_digital_avatar(avatar):
     db.session.commit()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_digital_avatar_by_user_id(user_id):
     """
     根据用户ID获取数字分身
@@ -66,15 +93,18 @@ def get_digital_avatar_by_user_id(user_id):
     return DigitalAvatar.query.filter(DigitalAvatar.user_id == user_id).first()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def update_digital_avatar(avatar):
     """
     更新数字分身实体
     :param avatar: DigitalAvatar实体
     """
+    db.session.merge(avatar)
     db.session.commit()
 
 
 # 旅行伙伴相关DAO函数
+@retry_db_operation(max_retries=3, delay=1)
 def insert_travel_partner(partner):
     """
     插入旅行伙伴实体
@@ -84,6 +114,7 @@ def insert_travel_partner(partner):
     db.session.commit()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_travel_partner_by_user_id(user_id):
     """
     根据用户ID获取旅行伙伴
@@ -93,16 +124,19 @@ def get_travel_partner_by_user_id(user_id):
     return TravelPartner.query.filter(TravelPartner.user_id == user_id).first()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def update_travel_partner(partner):
     """
     更新旅行伙伴实体
     :param partner: TravelPartner实体
     """
+    db.session.merge(partner)
     db.session.commit()
 
 
 
 # 旅行设置相关DAO函数
+@retry_db_operation(max_retries=3, delay=1)
 def insert_travel_settings(settings):
     """
     插入旅行设置实体
@@ -116,6 +150,7 @@ def insert_travel_settings(settings):
         raise e
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_travel_settings_by_user_id(user_id):
     """
     根据用户ID获取旅行设置
@@ -125,16 +160,19 @@ def get_travel_settings_by_user_id(user_id):
     return TravelSettings.query.filter(TravelSettings.user_id == user_id).first()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def update_travel_settings(settings):
     """
     更新旅行设置实体
     :param settings: TravelSettings实体
     """
+    db.session.merge(settings)
     db.session.commit()
 
 
 
 # 聊天消息相关DAO函数
+@retry_db_operation(max_retries=3, delay=1)
 def insert_chat_message(message):
     """
     插入聊天消息
@@ -194,6 +232,7 @@ def insert_chat_message(message):
             raise e
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_chat_messages_by_session(user_id, session_id, limit=50):
     """
     根据用户ID和会话ID获取聊天消息
@@ -208,6 +247,7 @@ def get_chat_messages_by_session(user_id, session_id, limit=50):
     ).order_by(ChatMessages.created_at.asc()).limit(limit).all()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def insert_chat_session(session):
     """
     插入聊天会话
@@ -241,6 +281,7 @@ def insert_chat_session(session):
             raise e
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_chat_session_by_id(session_id):
     """
     根据session_id获取聊天会话
@@ -249,6 +290,7 @@ def get_chat_session_by_id(session_id):
     return ChatSession.query.filter(ChatSession.session_id == session_id).first()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_user_sessions(user_id, limit=10):
     """
     获取用户的聊天会话列表
@@ -260,6 +302,7 @@ def get_user_sessions(user_id, limit=10):
     ).order_by(ChatSession.created_at.desc()).limit(limit).all()
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def insert_chat_topic(topic):
     """
     插入聊天话题
@@ -293,6 +336,7 @@ def insert_chat_topic(topic):
             raise e
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_session_topics(session_id, limit=10):
     """
     获取会话的话题列表，按destination分组
@@ -316,6 +360,7 @@ def get_session_topics(session_id, limit=10):
     return topics_by_destination
 
 
+@retry_db_operation(max_retries=3, delay=1)
 def get_user_topics(user_id, limit=10):
     """
     获取用户的话题列表

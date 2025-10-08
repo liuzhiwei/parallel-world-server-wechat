@@ -114,6 +114,7 @@ def save_all_data():
         # 保存旅行设置信息
         settings = TravelSettings(
             user_id=user_id,
+            settings_id=id_gen.new_name_id(settings_data.get('destination', 'travel_settings')),
             destination=settings_data['destination'],
             days=settings_data['days'],
             preference=settings_data['preference'],

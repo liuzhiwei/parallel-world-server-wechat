@@ -30,10 +30,15 @@ class DialogueController:
             return None
 
         # 调用工具
-        speak_result = self.act(user_id, thought_result)
-        
-        if not speak_result or "text" not in speak_result:
-            logger.error(f"Act failed for user {user_id}")
+        speak_result = None
+        try:
+            speak_result = self.act(user_id, thought_result)
+            
+            if not speak_result or "text" not in speak_result:
+                logger.error(f"Act failed for user {user_id}")
+                return None
+        except Exception as e:
+            logger.error(f"Act method failed for user {user_id}: {e}, speak_result: {speak_result}")
             return None
 
         # 反思

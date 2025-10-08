@@ -55,6 +55,7 @@ class TravelSettings(db.Model):
     # 设定结构体对应表格的字段
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.String(100), nullable=False, index=True)
+    settings_id = db.Column(db.String(100), nullable=False, index=True)
     destination = db.Column(db.String(200), nullable=True)
     days = db.Column(db.Integer, nullable=True)
     preference = db.Column(db.Text, nullable=True)

@@ -136,8 +136,8 @@ class DialogueContext:
                 
                 # 直接裸查计数，绕过 ORM
                 try:
-                    cnt = conn.execute(text('SELECT COUNT(*) FROM "DigitalAvatar"')).scalar_one()
-                    logger.info(f'[DB] COUNT("DigitalAvatar") = {cnt}')
+                    cnt = conn.execute(text('SELECT COUNT(*) FROM `DigitalAvatar`')).scalar_one()
+                    logger.info(f'[DB] COUNT(`DigitalAvatar`) = {cnt}')
                 except Exception as e:
                     logger.error(f'[DB] COUNT 出错: {e}')
             
@@ -201,9 +201,8 @@ class DialogueContext:
             if self.travel_settings:
                 logger.info(f"成功加载旅行设置数据: settings_id={self.travel_settings.settings_id}, "
                            f"destination={self.travel_settings.destination}, "
-                           f"travel_days={self.travel_settings.travel_days}, "
-                           f"travel_preference={self.travel_settings.travel_preference}, "
-                           f"budget_range={self.travel_settings.budget_range}, "
+                           f"days={self.travel_settings.days}, "
+                           f"preference={self.travel_settings.preference}, "
                            f"created_at={self.travel_settings.created_at}")
             else:
                 logger.warning(f"未找到用户 {self.user_id} 的旅行设置数据")

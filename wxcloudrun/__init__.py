@@ -30,6 +30,21 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_username}:{db_password}@{db_address}/flask_demo?charset=utf8mb4'
     # 禁用SQLAlchemy修改跟踪（减少开销）
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # 数据库连接池配置
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_size': 10,
+        'pool_recycle': 3600,  # 1小时回收连接
+        'pool_pre_ping': True,  # 连接前检查
+        'pool_timeout': 30,
+        'max_overflow': 20,
+        'connect_args': {
+            'charset': 'utf8mb4',
+            'autocommit': True,
+            'connect_timeout': 30,
+            'read_timeout': 30,
+            'write_timeout': 30
+        }
+    }
 
     # 4) 初始化扩展
     db.init_app(app)
