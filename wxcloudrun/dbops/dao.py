@@ -10,6 +10,13 @@ from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSe
 # 初始化日志
 logger = logging.getLogger(__name__)
 
+def _maybe_dispose_engine(e: OperationalError):
+    try:
+        code = getattr(getattr(e, "orig", None), "args", [None])[0]
+        if code in (2006, 2013, 2014, 2045, 2055):  # MySQL 常见断连相关
+            db.engine.dispose()  # 彻底丢弃连接池，重建
+    except Exception:
+        pass
 
 def retry_db_operation(max_retries=3, delay=1):
     """数据库操作重试装饰器"""
@@ -26,6 +33,7 @@ def retry_db_operation(max_retries=3, delay=1):
                     logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {e}")
                     time.sleep(delay * (attempt + 1))  # 递增延迟
                     # 重新创建数据库会话
+                    _maybe_dispose_engine(e)
                     db.session.rollback()
             return None
         return wrapper

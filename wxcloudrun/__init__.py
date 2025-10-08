@@ -32,18 +32,23 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     # 数据库连接池配置
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_size': 10,
-        'pool_recycle': 3600,  # 1小时回收连接
-        'pool_pre_ping': True,  # 连接前检查
-        'pool_timeout': 30,
-        'max_overflow': 20,
+        # 小池子，避免容器+线程把连接占满
+        'pool_size': 5,
+        'max_overflow': 5,
+        'pool_timeout': 10,
+        # 关键：连接使用前先 ping；回收时间 < 服务端空闲超时
+        'pool_pre_ping': True,
+        'pool_recycle': 180,
+        # 尽量别把 autocommit 打开，交给 SQLAlchemy 接管事务
         'connect_args': {
             'charset': 'utf8mb4',
-            'autocommit': True,
-            'connect_timeout': 30,
-            'read_timeout': 30,
-            'write_timeout': 30
-        }
+            'connect_timeout': 5,
+            'read_timeout': 15,
+            'write_timeout': 15,
+            # 'autocommit': True,   # ← 删除这行
+        },
+        # 连接归还时做回滚，避免脏状态回池
+        'pool_reset_on_return': 'rollback',
     }
 
     # 4) 初始化扩展
