@@ -27,9 +27,7 @@ def create_app():
     db_password = os.environ.get("MYSQL_PASSWORD", 'root')
     db_address = os.environ.get("MYSQL_ADDRESS", '127.0.0.1:3306')
     # 设定数据库链接
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://{}:{}@{}/flask_demo'.format(db_username, 
-                                                                                 db_password,
-                                                                                 db_address)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_username}:{db_password}@{db_address}/flask_demo?charset=utf8mb4'
     # 禁用SQLAlchemy修改跟踪（减少开销）
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
