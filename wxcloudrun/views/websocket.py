@@ -1,10 +1,9 @@
 from flask_sock import Sock
-import json, logging, time, threading, queue
+import json, logging, time, threading
+from flask import current_app
 
 logger = logging.getLogger(__name__)
 
-# 全局事件队列：用于跨线程传递 (user_id, ws) 及控制事件
-event_q: "queue.Queue" = queue.Queue()
 
 def _close_ws_safely(ws):
     try:
@@ -27,12 +26,10 @@ def register_websocket_routes(app, sock):
             user_id = str(data.get("user_id", "")).strip()
             if not user_id:
                 raise ValueError("empty user_id")
-            # 将可用的 ws 发布到事件队列，由业务线程决定如何处理（含替换逻辑）
-            event_q.put({
-                "type": "save",
-                "user_id": user_id,
-                "ws": ws
-            })
+
+            # 存储可用的 ws，由业务线程决定如何处理（含替换逻辑）
+            user_socket_registry = current_app.extensions["user_socket_registry"]
+            user_socket_registry.upsert(user_id, ws)
             logger.info(f"[WS] saved published for user={user_id}")
         except Exception as e:
             logger.error(f"[WS] handshake failed: {e}")
@@ -78,14 +75,6 @@ def register_websocket_routes(app, sock):
             stop_flag["stop"] = True
             # 通知业务线程移除此 ws
             if user_id:
-                event_q.put({
-                    "type": "remove",
-                    "user_id": user_id,
-                    "ws": ws
-                })
+                user_socket_registry = current_app.extensions["user_socket_registry"]
+                user_socket_registry.remove(user_id, ws)
             logger.info(f"[WS] client disconnected user_id={user_id}")
-
-
-def get_event_queue():
-    """获取全局事件队列，供业务线程消费"""
-    return event_q

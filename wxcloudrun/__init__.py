@@ -3,9 +3,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_sock import Sock
 import os, threading, logging
 import pymysql
+from .agent.users_set import RoundRobinSet
+from .agent.ws_registry import WsRegistry
 
 db = SQLAlchemy()
 sock = Sock()
+alive_chat_users = RoundRobinSet()
+user_socket_registry = WsRegistry()
 
 def create_app():
 
@@ -54,7 +58,11 @@ def create_app():
     # 4) 初始化扩展
     db.init_app(app)
     sock.init_app(app)
-
+    app.extensions["alive_chat_users"] = alive_chat_users
+    app.extensions["user_socket_registry"] = user_socket_registry
+    # from flask import current_app
+    # alive_chat_users = current_app.extensions["alive_chat_users"]
+    
     # 4.1) 处理断连错误并重建连接池
     @app.teardown_appcontext
     def shutdown_session(exception=None):
@@ -92,7 +100,7 @@ def create_app():
 
     # 5) 路由与蓝图
     from .views.api import register_api_routes
-    from .views.websocket import register_websocket_routes, get_event_queue
+    from .views.websocket import register_websocket_routes
     from .views.user_views import user_bp
     from .views.test_views import test_bp
     from .agent.scheduler import start_dispatch
@@ -103,14 +111,14 @@ def create_app():
     app.register_blueprint(test_bp)
 
     # 6)在应用上下文里启动后台线程（关键！）
-    def _run_dispatch_in_ctx(q, stop_event):
+    def _run_dispatch_in_ctx(stop_event):
         with app.app_context():
-            start_dispatch(q, stop_event)
+            start_dispatch(stop_event)
 
     app.dispatcher_stop = threading.Event()
     threading.Thread(
         target=_run_dispatch_in_ctx,
-        args=(get_event_queue(), app.dispatcher_stop),
+        args=(app.dispatcher_stop),
         daemon=True
     ).start()
 

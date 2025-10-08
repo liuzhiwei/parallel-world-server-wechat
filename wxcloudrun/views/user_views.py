@@ -2,7 +2,7 @@ import os
 import uuid
 import logging
 import json
-from flask import request, Blueprint, Response
+from flask import request, Blueprint, Response, current_app
 from werkzeug.utils import secure_filename
 from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
@@ -203,6 +203,10 @@ def create_session():
         
         # 插入数据库
         insert_chat_session(session)
+
+        # 将用户添加到轮询队列
+        alive_chat_users = current_app.extensions["alive_chat_users"]
+        alive_chat_users.add(user_id)
         
         return make_succ_response({
             'session_id': session_id
@@ -210,6 +214,28 @@ def create_session():
         
     except Exception as e:
         return make_err_response(f'创建会话失败: {str(e)}')
+
+
+@user_bp.route('/session-out', methods=['POST'])
+def session_out():
+    """用户退出对话页，从轮询队列移除用户"""
+    try:
+        data = request.get_json()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return make_err_response('用户ID不能为空')
+        
+        # 从轮询队列中移除用户
+        alive_chat_users = current_app.extensions["alive_chat_users"]
+        alive_chat_users.remove(user_id)
+        
+        logger.info(f"用户 {user_id} 退出对话，已从轮询队列移除")
+        return make_succ_response({"message": "已退出对话"})
+        
+    except Exception as e:
+        logger.error(f"用户退出对话失败: {e}", exc_info=True)
+        return make_err_response(f'退出对话失败: {str(e)}')
 
 
 @user_bp.route('/user-profile', methods=['GET'])
@@ -250,6 +276,4 @@ def get_user_profile():
     except Exception as e:
         logger.error(f"获取用户资料失败: {e}", exc_info=True)
         return make_err_response(f'获取用户资料失败: {str(e)}')
-
-# 移除与 WebSocket 直连相关的辅助接口（已改为队列驱动）
 
