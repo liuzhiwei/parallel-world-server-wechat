@@ -19,7 +19,11 @@ def _maybe_dispose_engine(e: OperationalError):
         pass
 
 def retry_db_operation(max_retries=3, delay=1):
-    """数据库操作重试装饰器"""
+    """
+    数据库操作重试装饰器
+    仅针对已知的 MySQL 断连错误（2006/2013/2014/2045/2055）进行重试
+    其他错误直接抛出
+    """
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -27,14 +31,30 @@ def retry_db_operation(max_retries=3, delay=1):
                 try:
                     return func(*args, **kwargs)
                 except (OperationalError, DisconnectionError) as e:
-                    if attempt == max_retries - 1:
-                        logger.error(f"Database operation failed after {max_retries} attempts: {e}")
+                    # 检查是否是 MySQL 断连错误
+                    code = getattr(getattr(e, "orig", None), "args", [None])[0]
+                    is_disconnect = code in (2006, 2013, 2014, 2045, 2055)
+                    
+                    if not is_disconnect:
+                        # 非断连错误，直接抛出不重试
+                        logger.error(f"Database operation failed with non-disconnect error (code={code}): {e}")
                         raise
-                    logger.warning(f"Database operation failed (attempt {attempt + 1}/{max_retries}): {e}")
+                    
+                    # 断连错误，进行重试
+                    if attempt == max_retries - 1:
+                        logger.error(f"Database disconnect after {max_retries} retries (code={code}): {e}")
+                        raise
+                    
+                    logger.warning(f"Database disconnect detected (code={code}, attempt {attempt + 1}/{max_retries}), retrying...")
                     time.sleep(delay * (attempt + 1))  # 递增延迟
-                    # 重新创建数据库会话
+                    
+                    # 丢弃连接池并回滚会话
                     _maybe_dispose_engine(e)
-                    db.session.rollback()
+                    try:
+                        db.session.rollback()
+                    except:
+                        pass
+            
             return None
         return wrapper
     return decorator

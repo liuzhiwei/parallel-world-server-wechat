@@ -55,6 +55,41 @@ def create_app():
     db.init_app(app)
     sock.init_app(app)
 
+    # 4.1) 处理断连错误并重建连接池
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        """
+        按 SQLAlchemy 推荐处理断连：
+        1. 检测已知的断连错误码（2006/2013/2055等）
+        2. 记录详细日志并 dispose() 连接池
+        3. 其他错误正常抛出
+        """
+        import pymysql.err
+        from sqlalchemy.exc import OperationalError, DBAPIError
+        
+        logger = logging.getLogger(__name__)
+        
+        try:
+            db.session.remove()
+        except (OperationalError, DBAPIError) as e:
+            # 检查是否是已知的 MySQL 断连错误码
+            orig_exc = getattr(e, 'orig', None)
+            if isinstance(orig_exc, pymysql.err.OperationalError):
+                errno = orig_exc.args[0] if orig_exc.args else None
+                # MySQL 断连错误码：2006/2013/2055
+                if errno in (2006, 2013, 2055):
+                    logger.warning(
+                        f"MySQL disconnect detected (errno={errno}) during teardown: {orig_exc.args[1] if len(orig_exc.args) > 1 else ''}"
+                        f" - disposing connection pool"
+                    )
+                    # 丢弃整个连接池，下次请求会自动重建
+                    db.engine.dispose()
+                    return
+            
+            # 非断连错误，正常抛出
+            logger.error(f"Unexpected error during session teardown: {e}", exc_info=True)
+            raise
+
     # 5) 路由与蓝图
     from .views.api import register_api_routes
     from .views.websocket import register_websocket_routes, get_event_queue
