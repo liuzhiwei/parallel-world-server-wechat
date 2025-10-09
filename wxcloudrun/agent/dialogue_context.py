@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Optional, Dict
 import logging
+from datetime import datetime, timezone
 from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatTopics, ChatMessages
 from ..dbops.dao import insert_chat_topic
+from .. import db
 from .agent_data import TopicAction
 
 # 配置logging
@@ -215,14 +217,18 @@ class DialogueContext:
     def create_new_topic(self, topic_text: str, destination: str = None):
         """创建新的topic"""
         try:
+            # 现在数据库已移除唯一约束，可以始终创建新记录
             new_topic = ChatTopics(
                 user_id=self.user_id,
                 session_id=self.session_id,
                 destination=destination,
                 topic=topic_text,
+                created_at=datetime.now(timezone.utc)
             )
             
             insert_chat_topic(new_topic)
+            logger.info(f"创建新topic成功: user_id={self.user_id}, destination={destination}, topic={topic_text[:50]}...")
+            topic_obj = new_topic
             
             # 更新内存中的topic_history
             if destination:
@@ -240,7 +246,7 @@ class DialogueContext:
                 self.current_topic = topic_text  # 设置当前topic为话题内容
             
             logger.info(f"创建新topic成功: {topic_text}, destination: {destination}")
-            return new_topic
+            return topic_obj
         except Exception as e:
             logger.error(f"创建新topic失败: {e}")
             return None
