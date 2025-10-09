@@ -35,6 +35,8 @@ def start_dispatch(stop_event: Any) -> None:
             logger.warning("[DISPATCH] no WebSocket connection found for user %s, skipping for now, wait for frontend to reconnect", user_id)
             # 移除失效的连接，等待前端重连
             user_socket_registry.remove(user_id, ws)
+            # 生成回复失败时移除用户，要重新刷新进入，避免无限重试
+            alive_chat_users.remove(user_id)
             continue
 
         # 生成回复
