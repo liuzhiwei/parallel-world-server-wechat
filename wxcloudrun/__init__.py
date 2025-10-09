@@ -76,13 +76,14 @@ def create_app():
             if isinstance(orig_exc, pymysql.err.OperationalError):
                 errno = orig_exc.args[0] if orig_exc.args else None
                 if errno in (2006, 2013, 2055):
-                    logging.getLogger(__name__).warning(
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
                         f"MySQL disconnect (errno={errno}); disposing pool"
                     )
                     try:
                         db.engine.dispose()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.error(f"Dispose connection pool failed: {e}")
                     return
             # 其他错误：仅记录，避免 teardown 阶段再抛异常导致 worker 器械性中断
             logging.getLogger(__name__).error(

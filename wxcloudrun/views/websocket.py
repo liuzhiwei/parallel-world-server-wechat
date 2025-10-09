@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 def _close_ws_safely(ws):
     try:
         ws.close()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"[WS] 关闭WebSocket连接失败: {e}")
 
 def register_websocket_routes(app, sock: Sock):
     """注册 WebSocket 路由"""
@@ -51,14 +51,16 @@ def register_websocket_routes(app, sock: Sock):
                     if typ == "ping":
                         try:
                             ws.send(json.dumps({"type": "pong"}))
-                        except Exception:
+                        except Exception as e:
+                            logger.warning(f"[WS] 发送pong失败: {e}")
                             break
                     elif typ == "stop":
                         break
                     elif typ == "input":
                         # TODO: 这里接入你的业务
                         pass
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"[WS] 接收循环异常: {e}")
                     break
 
         g = spawn(recv_loop)
@@ -71,12 +73,20 @@ def register_websocket_routes(app, sock: Sock):
                 sleep(30)
         finally:
             running["v"] = False
-            try: g.kill()
-            except Exception: pass
+            try:
+                g.kill()
+            except Exception as e:
+                logger.warning(f"[WS] 停止接收协程失败: {e}")
+            
             if user_id:
                 try:
                     user_socket_registry = current_app.extensions["user_socket_registry"]
-                    user_socket_registry.remove(user_id, ws)
-                except Exception:
-                    pass
+                    user_socket_registry.remove(user_id)
+                    
+                    # 从轮询队列中移除用户
+                    alive_chat_users = current_app.extensions["alive_chat_users"]
+                    alive_chat_users.remove(user_id)
+                except Exception as e:
+                    logger.error(f"[WS] 清理用户连接失败 (user_id={user_id}): {e}")
+            
             logger.info(f"[WS] client disconnected user_id={user_id}")

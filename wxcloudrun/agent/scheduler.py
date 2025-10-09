@@ -16,7 +16,6 @@ def start_dispatch(stop_event: Any) -> None:
       2) if a "ws" is present on the event, send the reply to that ws
     """
     from .dialogue_controller import DialogueController
-    from ..views.websocket import _close_ws_safely  # reuse safe close helper
 
     controller = DialogueController()
 
@@ -34,7 +33,7 @@ def start_dispatch(stop_event: Any) -> None:
         if not ws:
             logger.warning("[DISPATCH] no WebSocket connection found for user %s, skipping for now, wait for frontend to reconnect", user_id)
             # 移除失效的连接，等待前端重连
-            user_socket_registry.remove(user_id, ws)
+            user_socket_registry.remove(user_id)
             # 生成回复失败时移除用户，要重新刷新进入，避免无限重试
             alive_chat_users.remove(user_id)
             continue
@@ -54,7 +53,6 @@ def start_dispatch(stop_event: Any) -> None:
                 ws.send(json.dumps(reply, ensure_ascii=False))
             except Exception as send_err:
                 logger.error("[DISPATCH] send failed for user %s: %s", user_id, send_err)
-                # 移除失效的连接，等待前端重连
-                _close_ws_safely(ws)
-                user_socket_registry.remove(user_id, ws)
+                # 移除失效的连接（会自动关闭ws），等待前端重连
+                user_socket_registry.remove(user_id)
                 alive_chat_users.remove(user_id)
