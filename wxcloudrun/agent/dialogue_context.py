@@ -99,11 +99,13 @@ class DialogueContext:
             # 其余的按destination分组到topic_history
             for topic_record in recent_topics:
                 destination = topic_record.destination or "未分类"
+                topic_text = topic_record.topic
+                
                 if destination not in self.topic_history:
                     self.topic_history[destination] = []
                 # 避免重复添加
-                if topic_record.topic not in self.topic_history[destination]:
-                    self.topic_history[destination].append(topic_record.topic)
+                if topic_text not in self.topic_history[destination]:
+                    self.topic_history[destination].append(topic_text)
             
             logger.info(f"从数据库加载了 {len(recent_topics)} 个话题，当前话题: {self.current_topic}")
             for dest, topics in self.topic_history.items():
@@ -309,31 +311,45 @@ class DialogueContext:
     
     def get_avatar_name(self) -> str:
         """获取数字分身名称"""
-        return self.digital_avatar.name if self.digital_avatar else "未知分身"
+        if not self.digital_avatar:
+            raise ValueError("数字分身数据未加载")
+        return self.digital_avatar.name
     
     def get_avatar_description(self) -> str:
         """获取数字分身描述"""
-        return self.digital_avatar.description if self.digital_avatar else "暂无描述"
+        if not self.digital_avatar:
+            raise ValueError("数字分身数据未加载")
+        return self.digital_avatar.description
     
     def get_partner_name(self) -> str:
         """获取旅行伙伴名称"""
-        return self.travel_partner.partner_name if self.travel_partner else "未知伙伴"
+        if not self.travel_partner:
+            raise ValueError("旅行伙伴数据未加载")
+        return self.travel_partner.partner_name
     
     def get_partner_description(self) -> str:
         """获取旅行伙伴描述"""
-        return self.travel_partner.partner_description if self.travel_partner else "暂无描述"
+        if not self.travel_partner:
+            raise ValueError("旅行伙伴数据未加载")
+        return self.travel_partner.partner_description
     
     def get_travel_destination(self) -> str:
         """获取旅行目的地"""
-        return self.travel_settings.destination if self.travel_settings else "未设置目的地"
+        if not self.travel_settings:
+            raise ValueError("旅行设置数据未加载")
+        return self.travel_settings.destination
     
     def get_travel_days(self) -> int:
         """获取旅行天数"""
-        return self.travel_settings.days if self.travel_settings and self.travel_settings.days else 0
+        if not self.travel_settings:
+            raise ValueError("旅行设置数据未加载")
+        return self.travel_settings.days if self.travel_settings.days else 0
     
     def get_travel_preference(self) -> str:
         """获取旅行偏好"""
-        return self.travel_settings.preference if self.travel_settings else "暂无偏好"
+        if not self.travel_settings:
+            raise ValueError("旅行设置数据未加载")
+        return self.travel_settings.preference
     
     def has_complete_profile(self) -> bool:
         """检查用户是否有完整的个人资料"""
