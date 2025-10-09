@@ -32,9 +32,7 @@ def start_dispatch(stop_event: Any) -> None:
         ws = user_socket_registry.get(user_id)
         if not ws:
             logger.warning("[DISPATCH] no WebSocket connection found for user %s, skipping for now, wait for frontend to reconnect", user_id)
-            # 移除失效的连接，等待前端重连
-            user_socket_registry.remove(user_id)
-            # 生成回复失败时移除用户，要重新刷新进入，避免无限重试
+            # 连接不存在，从轮询队列移除用户，等待前端重连
             alive_chat_users.remove(user_id)
             continue
 
@@ -54,5 +52,5 @@ def start_dispatch(stop_event: Any) -> None:
             except Exception as send_err:
                 logger.error("[DISPATCH] send failed for user %s: %s", user_id, send_err)
                 # 移除失效的连接（会自动关闭ws），等待前端重连
-                user_socket_registry.remove(user_id)
+                user_socket_registry.remove(user_id, ws)
                 alive_chat_users.remove(user_id)
