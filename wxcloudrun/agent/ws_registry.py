@@ -20,7 +20,12 @@ class WsRegistry:
             try:
                 old_ws.close()
             except Exception as e:
-                logger.warning(f"[WS] close old failed (user={user}): {e}")
+                # 检查是否是常见的连接关闭异常
+                error_str = str(e).lower()
+                if any(code in error_str for code in ['1005', '1006', 'connection closed', 'connection reset']):
+                    logger.info(f"[WS] 旧连接已关闭 (user={user}): {e}")
+                else:
+                    logger.warning(f"[WS] close old failed (user={user}): {e}")
 
     def get(self, user: Hashable) -> Optional[Any]:
         with self._lock:
@@ -52,7 +57,12 @@ class WsRegistry:
             try:
                 ws_to_close.close()
             except Exception as e:
-                logger.warning(f"[WS] close failed (user={user}): {e}")
+                # 检查是否是常见的连接关闭异常
+                error_str = str(e).lower()
+                if any(code in error_str for code in ['1005', '1006', 'connection closed', 'connection reset']):
+                    logger.info(f"[WS] 连接已关闭 (user={user}): {e}")
+                else:
+                    logger.warning(f"[WS] close failed (user={user}): {e}")
         return True
 
     def snapshot(self) -> dict[Hashable, Any]:

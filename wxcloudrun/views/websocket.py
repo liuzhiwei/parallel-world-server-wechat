@@ -60,7 +60,12 @@ def register_websocket_routes(app, sock: Sock):
                         # TODO: 这里接入你的业务
                         pass
                 except Exception as e:
-                    logger.warning(f"[WS] 接收循环异常: {e}")
+                    # 检查是否是常见的连接关闭异常
+                    error_str = str(e).lower()
+                    if any(code in error_str for code in ['1005', '1006', 'connection closed', 'connection reset']):
+                        logger.info(f"[WS] 接收循环结束: {e}")
+                    else:
+                        logger.warning(f"[WS] 接收循环异常: {e}")
                     break
 
         g = spawn(recv_loop)
@@ -86,6 +91,7 @@ def register_websocket_routes(app, sock: Sock):
                     # 从轮询队列中移除用户
                     alive_chat_users = current_app.extensions["alive_chat_users"]
                     alive_chat_users.remove(user_id)
+                    
                 except Exception as e:
                     logger.error(f"[WS] 清理用户连接失败 (user_id={user_id}): {e}")
             
