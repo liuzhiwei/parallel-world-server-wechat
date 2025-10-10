@@ -95,12 +95,14 @@ def create_app():
     from .views.websocket import register_websocket_routes
     from .views.user_views import user_bp
     from .views.test_views import test_bp
+    from .views.wechat_views import wechat_bp
     from .agent.scheduler import start_dispatch
 
     register_api_routes(app)
     register_websocket_routes(app, sock)
     app.register_blueprint(user_bp)
     app.register_blueprint(test_bp)
+    app.register_blueprint(wechat_bp)
 
     # 6) 后台调度线程（轻量任务 OK；重任务建议放到队列）
     # gevent 已在 run.py 里 monkey.patch_all()，这里的 threading 会被协作化
