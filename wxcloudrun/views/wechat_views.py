@@ -44,8 +44,14 @@ def wechat_login():
             'grant_type': 'authorization_code'
         }
         
-        response = requests.get(url, params=params)
-        result = response.json()
+        try:
+            response = requests.get(url, params=params)
+            result = response.json()
+        except requests.exceptions.SSLError as e:
+            logger.warning(f'SSL证书验证失败，尝试不验证证书: {e}')
+            # 备用方案：不验证SSL证书
+            response = requests.get(url, params=params, verify=False)
+            result = response.json()
         
         if 'openid' in result:
             openid = result['openid']

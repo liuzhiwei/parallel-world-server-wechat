@@ -5,7 +5,8 @@ RUN printf "https://mirrors.tencent.com/alpine/v3.18/main\nhttps://mirrors.tence
 
 # 系统依赖：运行时 + 构建期（musl 上编 gevent/greenlet 常用）
 RUN apk add --no-cache python3 py3-pip ca-certificates \
- && apk add --no-cache --virtual .build-deps build-base python3-dev musl-dev libffi-dev
+ && apk add --no-cache --virtual .build-deps build-base python3-dev musl-dev libffi-dev \
+ && update-ca-certificates
 
 # 设定工作目录
 WORKDIR /app
