@@ -7,7 +7,7 @@ from ..dbops.dao import ensure_user_exists
 logger = logging.getLogger(__name__)
 
 # 创建微信相关的蓝图
-wechat_bp = Blueprint('wechat', __name__)
+wechat_bp = Blueprint('wechat', __name__, url_prefix='/api')
 
 def make_succ_response(data=None):
     """成功响应"""
