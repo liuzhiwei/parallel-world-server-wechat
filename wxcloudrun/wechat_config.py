@@ -3,6 +3,12 @@
 """
 import os
 
+# 微信小程序配置
+WECHAT_CONFIG = {
+    'app_id': os.getenv('WECHAT_APPID'),
+    'app_secret': os.getenv('WECHAT_APP_SECRET')
+}
+
 class WeChatCloudConfig:
     """微信云托管配置类"""
     
