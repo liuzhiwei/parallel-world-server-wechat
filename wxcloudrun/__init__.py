@@ -60,7 +60,8 @@ def create_app():
     @app.teardown_appcontext
     def shutdown_session(exception=None):
         """
-        - MySQL 断连（2006/2013/2055）：记录并 dispose()，下次自动重建
+        - MySQL 断连（2006/2013/2055/9449）：记录并 dispose()，下次自动重建
+        - 9449: CynosDB Serverless 实例恢复中
         - 其他异常：记录日志但不在 teardown 再抛，避免影响 worker 稳定性
         """
         import pymysql.err
@@ -72,10 +73,10 @@ def create_app():
             orig_exc = getattr(e, "orig", None)
             if isinstance(orig_exc, pymysql.err.OperationalError):
                 errno = orig_exc.args[0] if orig_exc.args else None
-                if errno in (2006, 2013, 2055):
+                if errno in (2006, 2013, 2055, 9449):
                     logger = logging.getLogger(__name__)
                     logger.warning(
-                        f"MySQL disconnect (errno={errno}); disposing pool"
+                        f"Database connection issue (errno={errno}); disposing pool"
                     )
                     try:
                         db.engine.dispose()

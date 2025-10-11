@@ -13,15 +13,17 @@ logger = logging.getLogger(__name__)
 def _maybe_dispose_engine(e: OperationalError):
     try:
         code = getattr(getattr(e, "orig", None), "args", [None])[0]
-        if code in (2006, 2013, 2014, 2045, 2055):  # MySQL 常见断连相关
+        if code in (2006, 2013, 2014, 2045, 2055, 9449):  # MySQL 常见断连相关 + CynosDB serverless 恢复中
             db.engine.dispose()  # 彻底丢弃连接池，重建
     except Exception:
         pass
 
-def retry_db_operation(max_retries=3, delay=1):
+def retry_db_operation(max_retries=5, delay=2):
     """
     数据库操作重试装饰器
-    仅针对已知的 MySQL 断连错误（2006/2013/2014/2045/2055）进行重试
+    针对已知的数据库连接错误进行重试：
+    - MySQL 断连错误：2006/2013/2014/2045/2055
+    - CynosDB Serverless 恢复中：9449
     其他错误直接抛出
     """
     def decorator(func):
@@ -31,29 +33,37 @@ def retry_db_operation(max_retries=3, delay=1):
                 try:
                     return func(*args, **kwargs)
                 except (OperationalError, DisconnectionError) as e:
-                    # 检查是否是 MySQL 断连错误
+                    # 检查是否是可重试的数据库错误
                     code = getattr(getattr(e, "orig", None), "args", [None])[0]
-                    is_disconnect = code in (2006, 2013, 2014, 2045, 2055)
+                    # MySQL 断连 + CynosDB Serverless 实例恢复中
+                    is_retriable = code in (2006, 2013, 2014, 2045, 2055, 9449)
                     
-                    if not is_disconnect:
-                        # 非断连错误，直接抛出不重试
-                        logger.error(f"Database operation failed with non-disconnect error (code={code}): {e}")
+                    if not is_retriable:
+                        # 非可重试错误，直接抛出
+                        logger.error(f"Database operation failed with non-retriable error (code={code}): {e}")
                         raise
                     
-                    # 断连错误，进行重试
+                    # 可重试错误，进行重试
                     if attempt == max_retries - 1:
-                        logger.error(f"Database disconnect after {max_retries} retries (code={code}): {e}")
+                        logger.error(f"Database operation failed after {max_retries} retries (code={code}): {e}")
                         raise
                     
-                    logger.warning(f"Database disconnect detected (code={code}, attempt {attempt + 1}/{max_retries}), retrying...")
-                    time.sleep(delay * (attempt + 1))  # 递增延迟
+                    # CynosDB Serverless 恢复需要更长的等待时间
+                    retry_delay = delay * (attempt + 1)
+                    if code == 9449:  # CynosDB serverless 恢复
+                        retry_delay = min(retry_delay * 2, 10)  # 延长等待时间，最长10秒
+                        logger.warning(f"CynosDB Serverless instance resuming (attempt {attempt + 1}/{max_retries}), waiting {retry_delay}s...")
+                    else:
+                        logger.warning(f"Database connection error (code={code}, attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s...")
+                    
+                    time.sleep(retry_delay)
                     
                     # 丢弃连接池并回滚会话
                     _maybe_dispose_engine(e)
                     try:
                         db.session.rollback()
-                    except:
-                        pass
+                    except Exception as rollback_err:
+                        logger.warning(f"Session rollback failed: {rollback_err}")
             
             return None
         return wrapper
