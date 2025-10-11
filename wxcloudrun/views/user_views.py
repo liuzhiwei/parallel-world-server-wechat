@@ -4,8 +4,8 @@ import logging
 import json
 from flask import request, Blueprint, Response, current_app
 from werkzeug.utils import secure_filename
-from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, ensure_user_exists, insert_chat_session, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id
-from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings, ChatSession
+from ..dbops.dao import insert_digital_avatar, insert_travel_partner, insert_travel_settings, insert_user, get_digital_avatar_by_user_id, get_travel_partner_by_user_id, get_travel_settings_by_user_id
+from ..dbops.model import DigitalAvatar, TravelPartner, TravelSettings
 from ..wechat_config import WeChatCloudConfig
 from ..idgeneration import id_gen
 
@@ -47,8 +47,8 @@ def create_user():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
-        # 确保用户存在
-        user = ensure_user_exists(user_id)
+        # 创建用户记录
+        user = insert_user(user_id)
         
         return make_succ_response({
             'message': '用户记录创建成功',
@@ -88,8 +88,8 @@ def save_all_data():
         if not user_id.strip():
             return make_err_response('用户ID不能为空')
         
-        # 确保用户存在
-        ensure_user_exists(user_id)
+        # 创建用户记录
+        user = insert_user(user_id)
 
         # 保存分身信息
         avatar = DigitalAvatar(
@@ -182,60 +182,6 @@ def upload_avatar():
         return make_err_response(f'文件上传失败: {str(e)}')
 
 
-@user_bp.route('/create-session', methods=['POST'])
-def create_session():
-    """创建新的聊天会话"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return make_err_response('user_id is required')
-        
-        # 生成新的session_id
-        session_id = id_gen.new_session_id()
-
-        # 创建session记录
-        session = ChatSession(
-            session_id=session_id,
-            user_id=user_id,
-        )
-        
-        # 插入数据库
-        insert_chat_session(session)
-
-        # 将用户添加到轮询队列
-        alive_chat_users = current_app.extensions["alive_chat_users"]
-        alive_chat_users.add(user_id, session_id)
-        
-        return make_succ_response({
-            'session_id': session_id
-        })
-        
-    except Exception as e:
-        return make_err_response(f'创建会话失败: {str(e)}')
-
-
-@user_bp.route('/session-out', methods=['POST'])
-def session_out():
-    """用户退出对话页，从轮询队列移除用户"""
-    try:
-        data = request.get_json()
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return make_err_response('用户ID不能为空')
-        
-        # 从轮询队列中移除用户
-        alive_chat_users = current_app.extensions["alive_chat_users"]
-        alive_chat_users.remove(user_id)
-        
-        logger.info(f"用户 {user_id} 退出对话，已从轮询队列移除")
-        return make_succ_response({"message": "已退出对话"})
-        
-    except Exception as e:
-        logger.error(f"用户退出对话失败: {e}", exc_info=True)
-        return make_err_response(f'退出对话失败: {str(e)}')
 
 
 @user_bp.route('/user-profile', methods=['GET'])

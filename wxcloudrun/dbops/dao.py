@@ -5,7 +5,7 @@ from functools import wraps
 from sqlalchemy.exc import OperationalError, DisconnectionError
 
 from wxcloudrun import db
-from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSettings, ChatMessages, ChatSession, ChatTopics
+from wxcloudrun.dbops.model import Users, DigitalAvatar, TravelPartner, TravelSettings, ChatMessages, ChatTopics
 
 # 初始化日志
 logger = logging.getLogger(__name__)
@@ -62,14 +62,20 @@ def retry_db_operation(max_retries=3, delay=1):
 
 # 用户相关DAO函数
 @retry_db_operation(max_retries=3, delay=1)
-def insert_user(user):
+def insert_user(user_id):
     """
-    插入用户实体
-    :param user: Users实体
+    插入用户实体，自动生成session_id
+    :param user_id: 用户ID
+    :return: 创建的用户实体
     """
     try:
+        from ..idgeneration import id_gen
+        session_id = id_gen.new_session_id()
+        user = Users(user_id=user_id, session_id=session_id)
+        
         db.session.add(user)
         db.session.commit()
+        return user
     except Exception as e:
         db.session.rollback()
         raise e
@@ -78,26 +84,33 @@ def insert_user(user):
 @retry_db_operation(max_retries=3, delay=1)
 def get_user_by_user_id(user_id):
     """
-    根据用户ID获取用户
+    根据用户ID获取最新的用户记录
     :param user_id: 用户ID
+    :return: 用户实体（最新的记录）
+    """
+    return Users.query.filter(Users.user_id == user_id).order_by(Users.created_at.desc()).first()
+
+@retry_db_operation(max_retries=3, delay=1)
+def get_user_by_user_id_and_session_id(user_id, session_id):
+    """
+    根据用户ID和会话ID获取用户记录
+    :param user_id: 用户ID
+    :param session_id: 会话ID
     :return: 用户实体
     """
-    return Users.query.filter(Users.user_id == user_id).first()
+    return Users.query.filter(Users.user_id == user_id, Users.session_id == session_id).first()
 
-
-def ensure_user_exists(user_id):
+@retry_db_operation(max_retries=3, delay=1)
+def get_user_session_id(user_id):
     """
-    确保用户存在，如果不存在则创建
+    从 Users 表获取用户的最新 session_id
     :param user_id: 用户ID
-    :return: 用户实体
+    :return: session_id 字符串，如果用户不存在返回 None
     """
-    user = get_user_by_user_id(user_id)
-    
-    if not user:
-        user = Users(user_id=user_id)
-        insert_user(user)
-    
-    return user
+    user = Users.query.filter(Users.user_id == user_id).order_by(Users.created_at.desc()).first()
+    return user.session_id if user else None
+
+
 
 
 # 数字分身相关DAO函数
@@ -261,73 +274,26 @@ def insert_chat_message(message):
 
 
 @retry_db_operation(max_retries=3, delay=1)
-def get_chat_messages_by_session(user_id, session_id, limit=50):
+def get_chat_messages_by_user(user_id, limit=50):
     """
-    根据用户ID和会话ID获取聊天消息
+    根据用户ID获取聊天消息（自动从 Users 表获取 session_id）
     :param user_id: 用户ID
-    :param session_id: 会话ID
     :param limit: 限制数量
     :return: 聊天消息列表
     """
+    # 从 Users 表获取 session_id
+    session_id = get_user_session_id(user_id)
+    if not session_id:
+        return []
+    
     return ChatMessages.query.filter(
         ChatMessages.user_id == user_id,
         ChatMessages.session_id == session_id
     ).order_by(ChatMessages.created_at.asc()).limit(limit).all()
 
 
-@retry_db_operation(max_retries=3, delay=1)
-def insert_chat_session(session):
-    """
-    插入聊天会话
-    :param session: ChatSession实体
-    """
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            db.session.add(session)
-            db.session.commit()
-            logger.info(f"会话插入成功: {session.session_id}")
-            return session
-            
-        except OperationalError as e:
-            logger.warning(f"数据库操作异常 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
-            db.session.rollback()
-            
-            if attempt < max_retries - 1:
-                # 重新创建session
-                db.session.remove()
-                import time
-                time.sleep(0.1 * (attempt + 1))  # 递增延迟
-                continue
-            else:
-                logger.error(f"会话插入失败，已重试 {max_retries} 次: {str(e)}")
-                raise e
-                
-        except Exception as e:
-            logger.error(f"会话插入失败: {str(e)}")
-            db.session.rollback()
-            raise e
 
 
-@retry_db_operation(max_retries=3, delay=1)
-def get_chat_session_by_id(session_id):
-    """
-    根据session_id获取聊天会话
-    :param session_id: 会话ID
-    """
-    return ChatSession.query.filter(ChatSession.session_id == session_id).first()
-
-
-@retry_db_operation(max_retries=3, delay=1)
-def get_user_sessions(user_id, limit=10):
-    """
-    获取用户的聊天会话列表
-    :param user_id: 用户ID
-    :param limit: 限制数量
-    """
-    return ChatSession.query.filter(
-        ChatSession.user_id == user_id
-    ).order_by(ChatSession.created_at.desc()).limit(limit).all()
 
 
 @retry_db_operation(max_retries=3, delay=1)
@@ -365,13 +331,18 @@ def insert_chat_topic(topic):
 
 
 @retry_db_operation(max_retries=3, delay=1)
-def get_session_topics(session_id, limit=10):
+def get_user_session_topics(user_id, limit=10):
     """
-    获取会话的话题列表，按destination分组
-    :param session_id: 会话ID
+    获取用户会话的话题列表，按destination分组（自动从 Users 表获取 session_id）
+    :param user_id: 用户ID
     :param limit: 限制数量
     :return: 按destination分组的topics字典 {"destination_1": ["topic_1", "topic_2"], ...}
     """
+    # 从 Users 表获取 session_id
+    session_id = get_user_session_id(user_id)
+    if not session_id:
+        return {}
+    
     topics = ChatTopics.query.filter(
         ChatTopics.session_id == session_id
     ).order_by(ChatTopics.created_at.desc()).limit(limit).all()

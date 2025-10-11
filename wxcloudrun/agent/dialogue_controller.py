@@ -17,10 +17,12 @@ class DialogueController:
         self.user_context: Dict[str, DialogueContext] = {}
 
 
-    def step(self, user_id: str, session_id: str):
-        
+    def step(self, user_id: str):
         # 构建完整的用户上下文
-        self.build_user_context(user_id, session_id)
+        context = self.build_user_context(user_id)
+        if not context:
+            logger.error(f"Failed to build context for user {user_id}")
+            return None
         
         # 思考
         thought_result = self.thought(user_id)
@@ -67,11 +69,15 @@ class DialogueController:
 
         return reply
 
-    def build_user_context(self, user_id: str, session_id: str):
+    def build_user_context(self, user_id: str):
         """从字典中获取context实例，如果没有则创建一个"""
         if user_id not in self.user_context:
-            self.user_context[user_id] = DialogueContext(user_id, session_id)
-            self.user_context[user_id].build()
+            try:
+                self.user_context[user_id] = DialogueContext(user_id)
+                self.user_context[user_id].build()
+            except ValueError as e:
+                logger.error(f"Failed to create DialogueContext for user {user_id}: {e}")
+                return None
         
         return self.user_context[user_id]
 

@@ -2,7 +2,7 @@ import requests
 import logging
 from flask import Blueprint, request, jsonify
 from ..wechat_config import WECHAT_CONFIG
-from ..dbops.dao import ensure_user_exists
+from ..dbops.dao import insert_user
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +59,8 @@ def wechat_login():
             
             # 直接创建用户记录
             try:
-                user = ensure_user_exists(openid)
-                logger.info(f'用户记录创建成功，user_id: {openid}, db_id: {user.id}')
+                user = insert_user(openid)
+                logger.info(f'用户记录创建成功，user_id: {openid}, session_id: {user.session_id}, db_id: {user.id}')
             except Exception as e:
                 logger.error(f'创建用户记录失败: {e}')
                 return make_err_response(f'创建用户记录失败: {str(e)}')

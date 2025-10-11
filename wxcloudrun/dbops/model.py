@@ -10,9 +10,9 @@ class Users(db.Model):
 
     # 设定结构体对应表格的字段
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100), nullable=False, unique=True)
+    user_id = db.Column(db.String(100), nullable=False, index=True)  # 移除unique=True
+    session_id = db.Column(db.String(100), nullable=False, index=True)  # 新增session_id
     created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
-    updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 数字分身表
@@ -63,16 +63,6 @@ class TravelSettings(db.Model):
     updated_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
-# 聊天会话表
-class ChatSession(db.Model):
-    # 设置结构体表格名称
-    __tablename__ = 'ChatSession'
-
-    # 设定结构体对应表格的字段
-    id = db.Column(db.Integer, primary_key=True)
-    session_id = db.Column(db.String(100), nullable=False, index=True)
-    user_id = db.Column(db.String(100), nullable=False, index=True)
-    created_at = db.Column(db.TIMESTAMP, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # 聊天话题表

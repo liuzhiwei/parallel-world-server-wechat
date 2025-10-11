@@ -11,9 +11,7 @@ sock = Sock()
 
 # 你的进程内结构保持不变（单 worker 即可）
 from .agent.users_set import RoundRobinSet
-from .agent.ws_registry import WsRegistry
 alive_chat_users = RoundRobinSet()
-user_socket_registry = WsRegistry()
 
 def create_app():
     # 1) 实例化 Flask
@@ -56,8 +54,7 @@ def create_app():
     # 4) 初始化扩展
     db.init_app(app)
     sock.init_app(app)
-    app.extensions["alive_chat_users"]     = alive_chat_users
-    app.extensions["user_socket_registry"] = user_socket_registry
+    app.extensions["alive_chat_users"] = alive_chat_users
 
     # 4.1) teardown：断连时释放连接池；其他情况仅记录日志（不要再抛异常）
     @app.teardown_appcontext

@@ -22,23 +22,14 @@ def start_dispatch(stop_event: Any) -> None:
     while not getattr(stop_event, "is_set", lambda: False)():
         # 获取轮询队列
         alive_chat_users = current_app.extensions["alive_chat_users"]
-        user_id, session_id = alive_chat_users.next()   # 空则阻塞
-        if not user_id or not session_id:
-            logger.warning("[DISPATCH] event without user_id: %s, session_id: %s", user_id, session_id)
-            continue
-
-        # 检查WebSocket连接是否存在
-        user_socket_registry = current_app.extensions["user_socket_registry"]
-        ws = user_socket_registry.get(user_id)
-        if not ws:
-            logger.warning("[DISPATCH] no WebSocket connection found for user %s, skipping for now, wait for frontend to reconnect", user_id)
-            # 连接不存在，从轮询队列移除用户，等待前端重连
-            alive_chat_users.remove(user_id)
+        user_id, ws = alive_chat_users.next()   # 空则阻塞
+        if not user_id or not ws:
+            logger.warning("[DISPATCH] event without user_id: %s, ws: %s", user_id, ws)
             continue
 
         # 生成回复
         try:
-            reply = controller.step(user_id, session_id)
+            reply = controller.step(user_id)
         except Exception as e:
             logger.error("[DISPATCH] error generating reply for user %s: %s", user_id, e)
             # 生成回复失败时移除用户，避免无限重试
@@ -51,6 +42,5 @@ def start_dispatch(stop_event: Any) -> None:
                 ws.send(json.dumps(reply, ensure_ascii=False))
             except Exception as send_err:
                 logger.error("[DISPATCH] send failed for user %s: %s", user_id, send_err)
-                # 移除失效的连接（会自动关闭ws），等待前端重连
-                user_socket_registry.remove(user_id, ws)
+                # 移除失效的连接，等待前端重连
                 alive_chat_users.remove(user_id)

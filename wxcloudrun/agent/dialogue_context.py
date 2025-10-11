@@ -21,9 +21,9 @@ class HistoryItem:
 
 class DialogueContext:
 
-    def __init__(self, user_id: str, session_id: str):
+    def __init__(self, user_id: str):
         self.user_id = user_id
-        self.session_id = session_id
+        self.session_id: Optional[str] = None
         # 用户历史
         self.history: List[HistoryItem] = []
         # 用户数据属性
@@ -36,6 +36,9 @@ class DialogueContext:
 
     def build(self):
         """构建用户上下文：加载历史记录和用户数据"""
+        
+        # 从 Users 表加载 session_id
+        self.load_session_id()
         
         # 从数据库加载最近的10条对话历史
         self.load_recent_history_from_db(limit=10)
@@ -52,6 +55,14 @@ class DialogueContext:
         # 从数据库加载旅行目的地
         self.load_travel_settings_from_db()
     
+    def load_session_id(self):
+        """从 Users 表加载 session_id"""
+        from ..dbops.dao import get_user_session_id
+        self.session_id = get_user_session_id(self.user_id)
+        if not self.session_id:
+            raise ValueError(f"No session_id found for user {self.user_id}")
+        logger.info(f"Loaded session_id for user {self.user_id}: {self.session_id}")
+
     def load_recent_history_from_db(self, limit: int = 10):
         """从ChatMessages表加载最近的对话历史"""
         try:

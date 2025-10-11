@@ -27,10 +27,12 @@ def register_websocket_routes(app, sock: Sock):
             user_id = str(data.get("user_id", "")).strip()
             if not user_id:
                 raise ValueError("empty user_id")
-
-            user_socket_registry = current_app.extensions["user_socket_registry"]
-            user_socket_registry.add(user_id, ws)
-            logger.info(f"[WS] saved published for user={user_id}")
+            
+            # 添加到轮询队列
+            alive_chat_users = current_app.extensions["alive_chat_users"]
+            alive_chat_users.add(user_id, ws)
+            
+            logger.info(f"[WS] user added to queue: user={user_id}")
         except Exception as e:
             logger.error(f"[WS] handshake failed: {e}")
             _close_ws_safely(ws)
@@ -85,13 +87,9 @@ def register_websocket_routes(app, sock: Sock):
             
             if user_id:
                 try:
-                    user_socket_registry = current_app.extensions["user_socket_registry"]
-                    user_socket_registry.remove(user_id, ws)
-                    
                     # 从轮询队列中移除用户
                     alive_chat_users = current_app.extensions["alive_chat_users"]
                     alive_chat_users.remove(user_id)
-                    
                 except Exception as e:
                     logger.error(f"[WS] 清理用户连接失败 (user_id={user_id}): {e}")
             
